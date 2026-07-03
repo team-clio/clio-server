@@ -1,3 +1,16 @@
 spring:
   application:
     name: clio
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/clio}
+    username: ${SPRING_DATASOURCE_USERNAME:clio}
+    password: ${SPRING_DATASOURCE_PASSWORD:clio}
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+clio:
+  workspace-root: ${CLIO_WORKSPACE_ROOT:/workspace}
