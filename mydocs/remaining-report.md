@@ -45,6 +45,11 @@ Agentic Code Analysis
 - 코드베이스 심볼 기반 도메인 후보를 LLM 선택지로 제공
 - RAW_ONLY / PREPARED_ONLY / HYBRID 비교가 가능하도록 검색 입력 생성 모드 분리
 - MVP용 JPA `ddl-auto: update` 전환
+- input 구조화 단위 테스트 추가
+  - LLM 응답 파싱
+  - 코드베이스 후보 밖 `candidateDomains` 제거
+  - RAW_ONLY / PREPARED_ONLY / HYBRID 검색 입력 생성
+  - API key 마스킹
 
 ## 현재 문서 상태
 
@@ -91,6 +96,7 @@ Agentic Code Analysis
 - LLM 호출 실패 사유를 사용자에게 더 명확히 노출
 - RAW_ONLY / PREPARED_ONLY / HYBRID 결과 비교 저장 방식 결정
 - 샘플 리포트와 실제 검색 결과 비교
+- LLM Config CRUD 통합 테스트 추가
 - 스키마 안정화 후 Flyway migration 재도입
 
 초기 방식:
