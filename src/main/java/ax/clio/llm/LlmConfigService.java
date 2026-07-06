@@ -50,8 +50,8 @@ public class LlmConfigService {
 	@Transactional
 	public LlmConfigResponse update(Long id, LlmConfigUpdateRequest request) {
 		LlmConfig config = getConfig(id);
-		boolean defaultConfig = Boolean.TRUE.equals(request.defaultConfig());
-		if (defaultConfig) {
+		boolean defaultConfig = request.defaultConfig() == null ? config.isDefaultConfig() : request.defaultConfig();
+		if (defaultConfig && !config.isDefaultConfig()) {
 			clearDefaultConfig();
 		}
 		config.update(
@@ -60,7 +60,7 @@ public class LlmConfigService {
 				normalizeBaseUrl(request.baseUrl()),
 				request.apiKey(),
 				request.defaultModel(),
-				request.enabled() == null || request.enabled(),
+				request.enabled() == null ? config.isEnabled() : request.enabled(),
 				defaultConfig
 		);
 		return LlmConfigResponse.from(config);

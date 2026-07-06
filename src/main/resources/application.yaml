@@ -7,7 +7,7 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:clio}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${CLIO_DDL_AUTO:update}
     open-in-view: false
 
 clio:

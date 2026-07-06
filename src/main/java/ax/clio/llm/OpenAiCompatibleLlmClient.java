@@ -13,8 +13,8 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 
 	private final RestClient restClient;
 
-	public OpenAiCompatibleLlmClient() {
-		this.restClient = RestClient.create();
+	public OpenAiCompatibleLlmClient(RestClient.Builder restClientBuilder) {
+		this.restClient = restClientBuilder.build();
 	}
 
 	@Override

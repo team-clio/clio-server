@@ -99,8 +99,8 @@ public class AnalysisWorker {
 
 		String rationale = String.join("\n",
 				"- 관련 파일 수: " + relatedFileCount,
-				"- LLM 후보 도메인: " + emptyAsDash(preparation.candidateDomains()),
-				"- LLM 검색어: " + emptyAsDash(preparation.codeSearchTerms()),
+				"- 후보 도메인: " + emptyAsDash(preparation.candidateDomains()),
+				"- 검색어: " + emptyAsDash(preparation.codeSearchTerms()),
 				"- 검색 입력 신뢰도: " + preparation.confidence(),
 				"- 관련 테스트 코드 발견: " + (hasRelatedTest ? "예" : "아니오"),
 				"- Repository 관련 코드 포함: " + (touchesRepository ? "예" : "아니오"),
