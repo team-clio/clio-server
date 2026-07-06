@@ -45,11 +45,19 @@ Agentic Code Analysis
 - 코드베이스 심볼 기반 도메인 후보를 LLM 선택지로 제공
 - RAW_ONLY / PREPARED_ONLY / HYBRID 비교가 가능하도록 검색 입력 생성 모드 분리
 - MVP용 JPA `ddl-auto: update` 전환
+- Copilot PR 리뷰 대응
+  - LLM 설정 수정 시 null 필드가 기존 값을 덮어쓰지 않도록 수정
+  - RAW_ONLY 분석 결과에서 LLM 전용 표현이 보이지 않도록 문구 수정
+  - 코드베이스 도메인 후보 조회를 정렬하고 최대 80개로 제한
+  - `ddl-auto` 값을 환경 변수로 덮어쓸 수 있게 변경
+  - OpenAI-compatible HTTP client를 `RestClient.Builder` 주입 방식으로 변경
 - input 구조화 단위 테스트 추가
   - LLM 응답 파싱
   - 코드베이스 후보 밖 `candidateDomains` 제거
   - RAW_ONLY / PREPARED_ONLY / HYBRID 검색 입력 생성
   - API key 마스킹
+  - LLM 설정 수정 정책
+  - 코드베이스 도메인 후보 정렬/제한
 
 ## 현재 문서 상태
 
@@ -209,6 +217,7 @@ RAG/LLM 적용 후 비교 실험을 수행한다.
 완료: LLM Provider Config CRUD 구현
 완료: LLM 기반 검색 입력 생성 구현
 완료: RAW_ONLY / PREPARED_ONLY / HYBRID 분석 실행 옵션 추가
+완료: Copilot PR 리뷰 대응 및 테스트 통과
 진행 중: OpenAI-compatible 외 provider native adapter 확장
 대기: Code Chunk / Vector Search
 대기: Agentic Flow Expansion
