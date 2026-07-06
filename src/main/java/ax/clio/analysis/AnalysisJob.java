@@ -27,6 +27,15 @@ public class AnalysisJob {
 	@JoinColumn(name = "report_id", nullable = false)
 	private BugReport report;
 
+	private Long llmConfigId;
+
+	@Column(length = 200)
+	private String llmModel;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 30)
+	private ReportSearchInputMode searchMode;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 30)
 	private AnalysisJobStatus status;
@@ -74,8 +83,11 @@ public class AnalysisJob {
 	protected AnalysisJob() {
 	}
 
-	public AnalysisJob(BugReport report) {
+	public AnalysisJob(BugReport report, Long llmConfigId, String llmModel, ReportSearchInputMode searchMode) {
 		this.report = report;
+		this.llmConfigId = llmConfigId;
+		this.llmModel = llmModel;
+		this.searchMode = searchMode;
 		this.status = AnalysisJobStatus.PENDING;
 		this.createdAt = Instant.now();
 	}
@@ -113,6 +125,18 @@ public class AnalysisJob {
 
 	public BugReport getReport() {
 		return report;
+	}
+
+	public Long getLlmConfigId() {
+		return llmConfigId;
+	}
+
+	public String getLlmModel() {
+		return llmModel;
+	}
+
+	public ReportSearchInputMode getSearchMode() {
+		return searchMode;
 	}
 
 	public AnalysisJobStatus getStatus() {

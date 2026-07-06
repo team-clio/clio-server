@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 import ax.clio.common.BusinessException;
+import ax.clio.llm.LlmConfig;
+import ax.clio.llm.LlmConfigService;
 import ax.clio.report.BugReport;
 import ax.clio.report.BugReportService;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,19 +22,39 @@ public class AnalysisJobService {
 	private final BugReportService bugReportService;
 	private final AnalysisWorker analysisWorker;
 	private final Executor analysisTaskExecutor;
+	private final LlmConfigService llmConfigService;
 
 	public AnalysisJobService(AnalysisJobRepository analysisJobRepository, BugReportService bugReportService,
-			AnalysisWorker analysisWorker, @Qualifier("analysisTaskExecutor") Executor analysisTaskExecutor) {
+			AnalysisWorker analysisWorker, @Qualifier("analysisTaskExecutor") Executor analysisTaskExecutor,
+			LlmConfigService llmConfigService) {
 		this.analysisJobRepository = analysisJobRepository;
 		this.bugReportService = bugReportService;
 		this.analysisWorker = analysisWorker;
 		this.analysisTaskExecutor = analysisTaskExecutor;
+		this.llmConfigService = llmConfigService;
 	}
 
 	@Transactional
-	public AnalysisJobResponse create(Long reportId) {
+	public AnalysisJobResponse create(Long reportId, AnalysisJobCreateRequest request) {
 		BugReport report = bugReportService.getReport(reportId);
-		AnalysisJob job = analysisJobRepository.save(new AnalysisJob(report));
+		Long llmConfigId = request == null ? null : request.llmConfigId();
+		String model = request == null ? null : request.model();
+		ReportSearchInputMode searchMode = request == null ? null : request.searchMode();
+		if (llmConfigId != null) {
+			LlmConfig config = llmConfigService.getConfig(llmConfigId);
+			if (!config.isEnabled()) {
+				throw new BusinessException(HttpStatus.BAD_REQUEST, "LLM config is disabled");
+			}
+			if (model == null || model.isBlank()) {
+				model = config.getDefaultModel();
+			}
+			if (searchMode == null) {
+				searchMode = ReportSearchInputMode.HYBRID;
+			}
+		} else {
+			searchMode = ReportSearchInputMode.RAW_ONLY;
+		}
+		AnalysisJob job = analysisJobRepository.save(new AnalysisJob(report, llmConfigId, model, searchMode));
 		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 			@Override
 			public void afterCommit() {

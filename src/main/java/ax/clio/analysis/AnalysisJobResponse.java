@@ -5,6 +5,9 @@ import java.time.Instant;
 public record AnalysisJobResponse(
 		Long id,
 		Long reportId,
+		Long llmConfigId,
+		String llmModel,
+		ReportSearchInputMode searchMode,
 		AnalysisJobStatus status,
 		Instant createdAt,
 		Instant startedAt,
@@ -27,6 +30,9 @@ public record AnalysisJobResponse(
 		return new AnalysisJobResponse(
 				job.getId(),
 				job.getReport().getId(),
+				job.getLlmConfigId(),
+				job.getLlmModel(),
+				job.getSearchMode(),
 				job.getStatus(),
 				job.getCreatedAt(),
 				job.getStartedAt(),
