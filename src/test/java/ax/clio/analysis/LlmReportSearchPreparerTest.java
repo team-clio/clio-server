@@ -149,6 +149,27 @@ class LlmReportSearchPreparerTest {
 	}
 
 	@Test
+	void failsWhenListFieldContainsNonStringValue() {
+		BugReport report = report();
+		LlmConfig config = config();
+		when(domainCandidateProvider.findCandidates(any())).thenReturn(List.of("Payment"));
+		when(llmClient.completeJson(any(), any(), any(), any())).thenReturn(chatCompletion("""
+				{
+				  "reportType": "USER_REPORT",
+				  "businessTerms": ["결제", 123],
+				  "candidateDomains": ["Payment"],
+				  "symptoms": ["NOT_VISIBLE"],
+				  "codeSearchTerms": ["payment"],
+				  "confidence": "HIGH"
+				}
+				"""));
+
+		assertThatThrownBy(() -> preparer.prepare(report, config, "gpt-test"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage("Invalid LLM search input response: field 'businessTerms' must contain only strings");
+	}
+
+	@Test
 	void failsWhenEnumFieldHasUnsupportedValue() {
 		BugReport report = report();
 		LlmConfig config = config();
@@ -159,6 +180,33 @@ class LlmReportSearchPreparerTest {
 				  "businessTerms": ["결제"],
 				  "candidateDomains": ["Payment"],
 				  "symptoms": ["PAYMENT_BROKEN"],
+				  "codeSearchTerms": ["payment"],
+				  "confidence": "HIGH"
+				}
+				"""));
+
+		assertThatThrownBy(() -> preparer.prepare(report, config, "gpt-test"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage("Invalid LLM search input response: field 'symptoms' has unsupported value 'PAYMENT_BROKEN'");
+	}
+
+	@Test
+	void failsWhenEnumListHasUnsupportedValueAfterListLimit() {
+		BugReport report = report();
+		LlmConfig config = config();
+		when(domainCandidateProvider.findCandidates(any())).thenReturn(List.of("Payment"));
+		when(llmClient.completeJson(any(), any(), any(), any())).thenReturn(chatCompletion("""
+				{
+				  "reportType": "USER_REPORT",
+				  "businessTerms": ["결제"],
+				  "candidateDomains": ["Payment"],
+				  "symptoms": [
+				    "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE",
+				    "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE",
+				    "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE",
+				    "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE",
+				    "PAYMENT_BROKEN"
+				  ],
 				  "codeSearchTerms": ["payment"],
 				  "confidence": "HIGH"
 				}

@@ -115,14 +115,27 @@ public class LlmReportSearchPreparer implements ReportSearchPreparer {
 	}
 
 	private List<String> enumList(JsonNode node, String fieldName, Set<String> allowedValues) {
-		List<String> values = textList(node, fieldName);
-		List<String> invalidValues = values.stream()
-				.filter(value -> !allowedValues.contains(value))
-				.toList();
-		if (!invalidValues.isEmpty()) {
-			throw invalid("field '" + fieldName + "' has unsupported value '" + invalidValues.getFirst() + "'");
+		JsonNode field = node.get(fieldName);
+		if (!field.isArray()) {
+			throw invalid("field '" + fieldName + "' must be an array");
 		}
-		return values;
+		Set<String> values = new LinkedHashSet<>();
+		for (JsonNode item : field) {
+			if (!item.isTextual()) {
+				throw invalid("field '" + fieldName + "' must contain only strings");
+			}
+			String value = item.asText("").strip();
+			if (value.isBlank()) {
+				continue;
+			}
+			if (!allowedValues.contains(value)) {
+				throw invalid("field '" + fieldName + "' has unsupported value '" + value + "'");
+			}
+			values.add(value);
+		}
+		return values.stream()
+				.limit(MAX_LIST_SIZE)
+				.toList();
 	}
 
 	private String enumText(JsonNode node, String fieldName, Set<String> allowedValues) {
