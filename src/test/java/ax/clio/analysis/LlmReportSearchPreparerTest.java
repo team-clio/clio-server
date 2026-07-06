@@ -70,6 +70,30 @@ class LlmReportSearchPreparerTest {
 	}
 
 	@Test
+	void removesBlankAndDuplicateListValues() {
+		BugReport report = report();
+		LlmConfig config = config();
+		when(domainCandidateProvider.findCandidates(any())).thenReturn(List.of("Payment"));
+		when(llmClient.completeJson(any(), any(), any(), any())).thenReturn(chatCompletion("""
+				{
+				  "reportType": "USER_REPORT",
+				  "businessTerms": ["결제", "", "결제", "주문"],
+				  "candidateDomains": ["Payment", "Payment"],
+				  "symptoms": ["NOT_VISIBLE", "NOT_VISIBLE"],
+				  "codeSearchTerms": ["payment", "payment", "order"],
+				  "confidence": "HIGH"
+				}
+				"""));
+
+		ReportSearchPreparation preparation = preparer.prepare(report, config, "gpt-test");
+
+		assertThat(preparation.businessTerms()).containsExactly("결제", "주문");
+		assertThat(preparation.candidateDomains()).containsExactly("Payment");
+		assertThat(preparation.symptoms()).containsExactly("NOT_VISIBLE");
+		assertThat(preparation.codeSearchTerms()).containsExactly("payment", "order");
+	}
+
+	@Test
 	void failsWhenResponseContentIsEmpty() {
 		BugReport report = report();
 		LlmConfig config = config();
@@ -81,6 +105,116 @@ class LlmReportSearchPreparerTest {
 		assertThatThrownBy(() -> preparer.prepare(report, config, "gpt-test"))
 				.isInstanceOf(BusinessException.class)
 				.hasMessage("LLM response content is empty");
+	}
+
+	@Test
+	void failsWhenRequiredFieldIsMissing() {
+		BugReport report = report();
+		LlmConfig config = config();
+		when(domainCandidateProvider.findCandidates(any())).thenReturn(List.of("Payment"));
+		when(llmClient.completeJson(any(), any(), any(), any())).thenReturn(chatCompletion("""
+				{
+				  "businessTerms": ["결제"],
+				  "candidateDomains": ["Payment"],
+				  "symptoms": ["NOT_VISIBLE"],
+				  "codeSearchTerms": ["payment"],
+				  "confidence": "HIGH"
+				}
+				"""));
+
+		assertThatThrownBy(() -> preparer.prepare(report, config, "gpt-test"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage("Invalid LLM search input response: missing field 'reportType'");
+	}
+
+	@Test
+	void failsWhenListFieldIsNotArray() {
+		BugReport report = report();
+		LlmConfig config = config();
+		when(domainCandidateProvider.findCandidates(any())).thenReturn(List.of("Payment"));
+		when(llmClient.completeJson(any(), any(), any(), any())).thenReturn(chatCompletion("""
+				{
+				  "reportType": "USER_REPORT",
+				  "businessTerms": "결제",
+				  "candidateDomains": ["Payment"],
+				  "symptoms": ["NOT_VISIBLE"],
+				  "codeSearchTerms": ["payment"],
+				  "confidence": "HIGH"
+				}
+				"""));
+
+		assertThatThrownBy(() -> preparer.prepare(report, config, "gpt-test"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage("Invalid LLM search input response: field 'businessTerms' must be an array");
+	}
+
+	@Test
+	void failsWhenListFieldContainsNonStringValue() {
+		BugReport report = report();
+		LlmConfig config = config();
+		when(domainCandidateProvider.findCandidates(any())).thenReturn(List.of("Payment"));
+		when(llmClient.completeJson(any(), any(), any(), any())).thenReturn(chatCompletion("""
+				{
+				  "reportType": "USER_REPORT",
+				  "businessTerms": ["결제", 123],
+				  "candidateDomains": ["Payment"],
+				  "symptoms": ["NOT_VISIBLE"],
+				  "codeSearchTerms": ["payment"],
+				  "confidence": "HIGH"
+				}
+				"""));
+
+		assertThatThrownBy(() -> preparer.prepare(report, config, "gpt-test"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage("Invalid LLM search input response: field 'businessTerms' must contain only strings");
+	}
+
+	@Test
+	void failsWhenEnumFieldHasUnsupportedValue() {
+		BugReport report = report();
+		LlmConfig config = config();
+		when(domainCandidateProvider.findCandidates(any())).thenReturn(List.of("Payment"));
+		when(llmClient.completeJson(any(), any(), any(), any())).thenReturn(chatCompletion("""
+				{
+				  "reportType": "USER_REPORT",
+				  "businessTerms": ["결제"],
+				  "candidateDomains": ["Payment"],
+				  "symptoms": ["PAYMENT_BROKEN"],
+				  "codeSearchTerms": ["payment"],
+				  "confidence": "HIGH"
+				}
+				"""));
+
+		assertThatThrownBy(() -> preparer.prepare(report, config, "gpt-test"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage("Invalid LLM search input response: field 'symptoms' has unsupported value 'PAYMENT_BROKEN'");
+	}
+
+	@Test
+	void failsWhenEnumListHasUnsupportedValueAfterListLimit() {
+		BugReport report = report();
+		LlmConfig config = config();
+		when(domainCandidateProvider.findCandidates(any())).thenReturn(List.of("Payment"));
+		when(llmClient.completeJson(any(), any(), any(), any())).thenReturn(chatCompletion("""
+				{
+				  "reportType": "USER_REPORT",
+				  "businessTerms": ["결제"],
+				  "candidateDomains": ["Payment"],
+				  "symptoms": [
+				    "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE",
+				    "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE",
+				    "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE",
+				    "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE", "NOT_VISIBLE",
+				    "PAYMENT_BROKEN"
+				  ],
+				  "codeSearchTerms": ["payment"],
+				  "confidence": "HIGH"
+				}
+				"""));
+
+		assertThatThrownBy(() -> preparer.prepare(report, config, "gpt-test"))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage("Invalid LLM search input response: field 'symptoms' has unsupported value 'PAYMENT_BROKEN'");
 	}
 
 	private String chatCompletion(String content) {

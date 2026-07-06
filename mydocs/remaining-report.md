@@ -44,6 +44,12 @@ Agentic Code Analysis
 - LLM 기반 검색 입력 생성
 - 코드베이스 심볼 기반 도메인 후보를 LLM 선택지로 제공
 - RAW_ONLY / PREPARED_ONLY / HYBRID 비교가 가능하도록 검색 입력 생성 모드 분리
+- LLM 응답 schema 검증 강화
+  - 필수 필드 누락 검증
+  - 리스트 필드 타입 검증
+  - enum 필드 허용값 검증
+  - 빈 값/중복 검색어 정리
+  - 잘못된 응답의 실패 사유 명확화
 - MVP용 JPA `ddl-auto: update` 전환
 - Copilot PR 리뷰 대응
   - LLM 설정 수정 시 null 필드가 기존 값을 덮어쓰지 않도록 수정
@@ -100,10 +106,8 @@ Agentic Code Analysis
 
 해야 할 일:
 
-- LLM 응답 JSON schema 검증 강화
-- LLM 호출 실패 사유를 사용자에게 더 명확히 노출
-- RAW_ONLY / PREPARED_ONLY / HYBRID 결과 비교 저장 방식 결정
 - 샘플 리포트와 실제 검색 결과 비교
+- provider별 응답 포맷 흔들림 확인
 - LLM Config CRUD 통합 테스트 추가
 - 스키마 안정화 후 Flyway migration 재도입
 
@@ -120,18 +124,27 @@ Agentic Code Analysis
 - strict JSON schema
 - provider별 native adapter
 
-### 2. 하이브리드 검색 기반 정리
+### 2. 버그 리포트 기반 코드 후보 탐색
 
-리포트 원문과 정규화 검색 입력을 여러 검색 방식에 넣을 수 있게 한다.
+리포트 원문과 LLM 검색 입력을 기반으로 실제 코드 후보를 찾는 단계다.
+
+이 단계의 목표는 evidence 저장이 아니라, 먼저 어떤 코드가 관련 후보인지 더 정확히 고르는 것이다.
 
 해야 할 일:
 
-- keyword search 입력 분리
-- symbol search 입력 분리
-- code text search 입력 분리
-- RAW_ONLY / PREPARED_ONLY / HYBRID 비교 결과 저장 방식 결정
-- 향후 vector search 입력을 받을 수 있는 공통 evidence 구조 설계
-- 검색 결과 source/type/score 유지
+- RAW_REPORT / CANDIDATE_DOMAIN / KEYWORD 입력별 검색 결과 수집
+- 검색 입력 타입별 가중치 적용
+- 여러 입력에서 반복 등장한 파일/심볼 가산점 적용
+- 중복 결과 제거 기준 개선
+- 관련 코드 후보와 관련 테스트 후보 분리
+- 최종 relatedCode 생성 기준 개선
+
+아직 하지 않을 일:
+
+- DB evidence 저장
+- vector search
+- LangGraph
+- LLM 리포트 생성
 
 ### 3. Code Chunk / Vector Search
 
@@ -145,7 +158,7 @@ RAG를 붙이기 위한 기반이다.
 - vector search 구현
 - chunk 품질 확인
 
-### 4. Agentic Flow Expansion
+### 4. 관련 코드 분석 흐름 추적
 
 검색된 후보 주변의 실제 코드 흐름을 확장한다.
 
@@ -218,9 +231,10 @@ RAG/LLM 적용 후 비교 실험을 수행한다.
 완료: LLM 기반 검색 입력 생성 구현
 완료: RAW_ONLY / PREPARED_ONLY / HYBRID 분석 실행 옵션 추가
 완료: Copilot PR 리뷰 대응 및 테스트 통과
-진행 중: OpenAI-compatible 외 provider native adapter 확장
+완료: LLM 검색 입력 schema 검증 강화
+다음: 버그 리포트 기반 코드 후보 탐색 개선
 대기: Code Chunk / Vector Search
-대기: Agentic Flow Expansion
+대기: 관련 코드 분석 흐름 추적
 대기: Hybrid Rerank
 대기: LLM 리포트 생성
 대기: 벤치마크

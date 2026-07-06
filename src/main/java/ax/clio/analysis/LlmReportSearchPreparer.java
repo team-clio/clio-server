@@ -1,7 +1,8 @@
 package ax.clio.analysis;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import ax.clio.common.BusinessException;
 import ax.clio.llm.LlmClient;
@@ -14,6 +15,13 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class LlmReportSearchPreparer implements ReportSearchPreparer {
+
+	private static final Set<String> REPORT_TYPES = Set.of("USER_REPORT", "OPERATION_REPORT", "DEVELOPER_REPORT", "UNKNOWN");
+	private static final Set<String> SYMPTOMS = Set.of("NOT_VISIBLE", "NOT_FOUND", "STATE_NOT_UPDATED", "WRONG_VALUE",
+			"DUPLICATED", "DELAYED", "FAILED", "UNAUTHORIZED", "TIMEOUT", "ERROR", "INCONSISTENT", "UNKNOWN");
+	private static final Set<String> CONFIDENCES = Set.of("LOW", "MEDIUM", "HIGH");
+	private static final int MAX_LIST_SIZE = 20;
+	private static final int MAX_TEXT_LENGTH = 120;
 
 	private final CodebaseDomainCandidateProvider domainCandidateProvider;
 	private final LlmClient llmClient;
@@ -45,18 +53,37 @@ public class LlmReportSearchPreparer implements ReportSearchPreparer {
 				throw new BusinessException(HttpStatus.BAD_GATEWAY, "LLM response content is empty");
 			}
 			JsonNode content = objectMapper.readTree(contentNode.asText());
+			validateObject(content);
 			return new ReportSearchPreparation(
-					text(content, "reportType", "UNKNOWN"),
+					enumText(content, "reportType", REPORT_TYPES),
 					textList(content, "businessTerms"),
 					filterCandidates(textList(content, "candidateDomains"), domainCandidates),
-					textList(content, "symptoms"),
+					enumList(content, "symptoms", SYMPTOMS),
 					textList(content, "codeSearchTerms"),
-					text(content, "confidence", "LOW")
+					enumText(content, "confidence", CONFIDENCES)
 			);
 		} catch (BusinessException exception) {
 			throw exception;
 		} catch (Exception exception) {
 			throw new BusinessException(HttpStatus.BAD_GATEWAY, "Failed to parse LLM response");
+		}
+	}
+
+	private void validateObject(JsonNode content) {
+		if (!content.isObject()) {
+			throw invalid("content must be a JSON object");
+		}
+		require(content, "reportType");
+		require(content, "businessTerms");
+		require(content, "candidateDomains");
+		require(content, "symptoms");
+		require(content, "codeSearchTerms");
+		require(content, "confidence");
+	}
+
+	private void require(JsonNode node, String fieldName) {
+		if (!node.has(fieldName)) {
+			throw invalid("missing field '" + fieldName + "'");
 		}
 	}
 
@@ -68,23 +95,66 @@ public class LlmReportSearchPreparer implements ReportSearchPreparer {
 	}
 
 	private List<String> textList(JsonNode node, String fieldName) {
-		JsonNode field = node.path(fieldName);
-		List<String> values = new ArrayList<>();
+		JsonNode field = node.get(fieldName);
 		if (!field.isArray()) {
-			return values;
+			throw invalid("field '" + fieldName + "' must be an array");
 		}
+		Set<String> values = new LinkedHashSet<>();
 		for (JsonNode item : field) {
+			if (!item.isTextual()) {
+				throw invalid("field '" + fieldName + "' must contain only strings");
+			}
 			String value = item.asText("").strip();
-			if (!value.isBlank()) {
+			if (!value.isBlank() && value.length() <= MAX_TEXT_LENGTH) {
 				values.add(value);
 			}
 		}
-		return values;
+		return values.stream()
+				.limit(MAX_LIST_SIZE)
+				.toList();
 	}
 
-	private String text(JsonNode node, String fieldName, String defaultValue) {
-		String value = node.path(fieldName).asText(defaultValue).strip();
-		return value.isBlank() ? defaultValue : value;
+	private List<String> enumList(JsonNode node, String fieldName, Set<String> allowedValues) {
+		JsonNode field = node.get(fieldName);
+		if (!field.isArray()) {
+			throw invalid("field '" + fieldName + "' must be an array");
+		}
+		Set<String> values = new LinkedHashSet<>();
+		for (JsonNode item : field) {
+			if (!item.isTextual()) {
+				throw invalid("field '" + fieldName + "' must contain only strings");
+			}
+			String value = item.asText("").strip();
+			if (value.isBlank()) {
+				continue;
+			}
+			if (!allowedValues.contains(value)) {
+				throw invalid("field '" + fieldName + "' has unsupported value '" + value + "'");
+			}
+			values.add(value);
+		}
+		return values.stream()
+				.limit(MAX_LIST_SIZE)
+				.toList();
+	}
+
+	private String enumText(JsonNode node, String fieldName, Set<String> allowedValues) {
+		JsonNode field = node.get(fieldName);
+		if (!field.isTextual()) {
+			throw invalid("field '" + fieldName + "' must be a string");
+		}
+		String value = field.asText("").strip();
+		if (value.isBlank()) {
+			throw invalid("field '" + fieldName + "' is empty");
+		}
+		if (!allowedValues.contains(value)) {
+			throw invalid("field '" + fieldName + "' has unsupported value '" + value + "'");
+		}
+		return value;
+	}
+
+	private BusinessException invalid(String reason) {
+		return new BusinessException(HttpStatus.BAD_GATEWAY, "Invalid LLM search input response: " + reason);
 	}
 
 	private String systemPrompt() {
