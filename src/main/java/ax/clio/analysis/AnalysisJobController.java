@@ -6,6 +6,7 @@ import ax.clio.common.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,8 +21,9 @@ public class AnalysisJobController {
 	}
 
 	@PostMapping("/reports/{reportId}/analysis-jobs")
-	public ApiResponse<AnalysisJobResponse> create(@PathVariable Long reportId) {
-		return ApiResponse.ok(analysisJobService.create(reportId));
+	public ApiResponse<AnalysisJobResponse> create(@PathVariable Long reportId,
+			@RequestBody(required = false) AnalysisJobCreateRequest request) {
+		return ApiResponse.ok(analysisJobService.create(reportId, request));
 	}
 
 	@GetMapping("/reports/{reportId}/analysis-jobs")

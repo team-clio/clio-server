@@ -1,13 +1,13 @@
 package ax.clio.analysis;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import ax.clio.code.CodeSearchResult;
 import ax.clio.code.CodeSearchService;
 import ax.clio.code.CodeSymbolType;
+import ax.clio.llm.LlmConfig;
+import ax.clio.llm.LlmConfigService;
 import ax.clio.report.BugReport;
 import ax.clio.report.BugReportStatus;
 import org.springframework.stereotype.Component;
@@ -17,14 +17,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class AnalysisWorker {
 
 	private final AnalysisJobRepository analysisJobRepository;
-	private final RuleBasedReportStructurer reportStructurer;
 	private final CodeSearchService codeSearchService;
+	private final ReportSearchInputBuilder searchInputBuilder;
+	private final ReportSearchPreparer reportSearchPreparer;
+	private final LlmConfigService llmConfigService;
 
-	public AnalysisWorker(AnalysisJobRepository analysisJobRepository, RuleBasedReportStructurer reportStructurer,
-			CodeSearchService codeSearchService) {
+	public AnalysisWorker(AnalysisJobRepository analysisJobRepository, CodeSearchService codeSearchService,
+			ReportSearchInputBuilder searchInputBuilder, ReportSearchPreparer reportSearchPreparer,
+			LlmConfigService llmConfigService) {
 		this.analysisJobRepository = analysisJobRepository;
-		this.reportStructurer = reportStructurer;
 		this.codeSearchService = codeSearchService;
+		this.searchInputBuilder = searchInputBuilder;
+		this.reportSearchPreparer = reportSearchPreparer;
+		this.llmConfigService = llmConfigService;
 	}
 
 	@Transactional
@@ -35,9 +40,10 @@ public class AnalysisWorker {
 			job.getReport().changeStatus(BugReportStatus.ANALYZING);
 
 			BugReport report = job.getReport();
-			StructuredBugReport structured = reportStructurer.structure(report);
-			List<CodeSearchResult> relatedCode = searchRelatedCode(report.getProject().getId(), structured);
-			AnalysisResultDraft draft = buildDraft(report, structured, relatedCode);
+			ReportSearchPreparation preparation = prepare(report, job);
+			List<ReportSearchInput> searchInputs = searchInputBuilder.build(report, preparation, job.getSearchMode());
+			List<CodeSearchResult> relatedCode = searchRelatedCode(report.getProject().getId(), searchInputs);
+			AnalysisResultDraft draft = buildDraft(report, preparation, relatedCode);
 
 			job.complete(draft);
 			report.changeStatus(BugReportStatus.COMPLETED);
@@ -47,12 +53,17 @@ public class AnalysisWorker {
 		}
 	}
 
-	private List<CodeSearchResult> searchRelatedCode(Long projectId, StructuredBugReport structured) {
-		Set<String> queries = new LinkedHashSet<>();
-		queries.addAll(structured.domains());
-		queries.addAll(structured.keywords());
-		return queries.stream()
-				.flatMap(query -> codeSearchService.search(projectId, query, 10).stream())
+	private ReportSearchPreparation prepare(BugReport report, AnalysisJob job) {
+		if (job.getSearchMode() == ReportSearchInputMode.RAW_ONLY || job.getLlmConfigId() == null) {
+			return ReportSearchPreparation.rawOnly();
+		}
+		LlmConfig config = llmConfigService.getConfig(job.getLlmConfigId());
+		return reportSearchPreparer.prepare(report, config, job.getLlmModel());
+	}
+
+	private List<CodeSearchResult> searchRelatedCode(Long projectId, List<ReportSearchInput> searchInputs) {
+		return searchInputs.stream()
+				.flatMap(input -> codeSearchService.search(projectId, input.query(), 10).stream())
 				.collect(Collectors.toMap(
 						result -> result.filePath() + ":" + result.lineNumber() + ":" + result.matchType(),
 						result -> result,
@@ -65,7 +76,8 @@ public class AnalysisWorker {
 				.toList();
 	}
 
-	private AnalysisResultDraft buildDraft(BugReport report, StructuredBugReport structured, List<CodeSearchResult> relatedCode) {
+	private AnalysisResultDraft buildDraft(BugReport report, ReportSearchPreparation preparation,
+			List<CodeSearchResult> relatedCode) {
 		long relatedFileCount = relatedCode.stream().map(CodeSearchResult::filePath).distinct().count();
 		boolean hasRelatedTest = relatedCode.stream().anyMatch(CodeSearchResult::test);
 		boolean touchesEntity = relatedCode.stream().anyMatch(result -> result.symbolType() == CodeSymbolType.CLASS
@@ -73,9 +85,10 @@ public class AnalysisWorker {
 				&& result.snippet().toLowerCase().contains("entity"));
 		boolean touchesRepository = relatedCode.stream().anyMatch(result -> result.filePath().toLowerCase().contains("repository"));
 
-		int importance = scoreImportance(structured);
-		int difficulty = clamp(25 + (int) relatedFileCount * 8 + structured.domains().size() * 10 + (hasRelatedTest ? 0 : 10));
-		int risk = clamp(20 + structured.domains().size() * 12 + (touchesEntity ? 20 : 0) + (touchesRepository ? 15 : 0)
+		int importance = scoreImportance(preparation);
+		int difficulty = clamp(25 + (int) relatedFileCount * 8 + preparation.candidateDomains().size() * 10
+				+ (hasRelatedTest ? 0 : 10));
+		int risk = clamp(20 + preparation.candidateDomains().size() * 12 + (touchesEntity ? 20 : 0) + (touchesRepository ? 15 : 0)
 				+ (hasRelatedTest ? 0 : 15));
 
 		String related = relatedCode.stream()
@@ -86,14 +99,16 @@ public class AnalysisWorker {
 
 		String rationale = String.join("\n",
 				"- 관련 파일 수: " + relatedFileCount,
-				"- 감지 도메인: " + emptyAsDash(structured.domains()),
+				"- LLM 후보 도메인: " + emptyAsDash(preparation.candidateDomains()),
+				"- LLM 검색어: " + emptyAsDash(preparation.codeSearchTerms()),
+				"- 검색 입력 신뢰도: " + preparation.confidence(),
 				"- 관련 테스트 코드 발견: " + (hasRelatedTest ? "예" : "아니오"),
 				"- Repository 관련 코드 포함: " + (touchesRepository ? "예" : "아니오"),
 				"- Entity 변경 가능성 신호: " + (touchesEntity ? "예" : "아니오")
 		);
 
-		String summary = "리포트 '" + report.getTitle() + "'는 " + structured.issueType()
-				+ " 유형으로 분류되며, " + relatedFileCount + "개 파일 후보와 연결되었습니다.";
+		String summary = "리포트 '" + report.getTitle() + "'는 " + reportType(preparation)
+				+ " 입력으로 해석되며, " + relatedFileCount + "개 파일 후보와 연결되었습니다.";
 
 		String recommendedFix = "상위 점수 관련 코드부터 재현 경로를 확인하고, Controller-Service-Repository 흐름에서 상태 변경 또는 예외 처리 누락을 우선 검토하세요.";
 		String recommendedTests = hasRelatedTest
@@ -104,9 +119,9 @@ public class AnalysisWorker {
 				importance,
 				difficulty,
 				risk,
-				structured.issueType().name(),
-				String.join(",", structured.keywords()),
-				String.join(",", structured.domains()),
+				"UNKNOWN",
+				String.join(",", searchTerms(preparation)),
+				String.join(",", preparation.candidateDomains()),
 				summary,
 				related,
 				rationale,
@@ -115,20 +130,33 @@ public class AnalysisWorker {
 		);
 	}
 
-	private int scoreImportance(StructuredBugReport structured) {
-		int score = switch (structured.issueType()) {
-			case INCIDENT -> 85;
-			case BUG -> 70;
-			case FEATURE_REQUEST -> 45;
-			case IMPROVEMENT -> 40;
-			case UNKNOWN -> 50;
-		};
-		for (String domain : structured.domains()) {
-			if (domain.equals("PAYMENT") || domain.equals("AUTH") || domain.equals("ORDER")) {
+	private int scoreImportance(ReportSearchPreparation preparation) {
+		int score = 50;
+		for (String symptom : preparation.symptoms()) {
+			if (symptom.equals("FAILED") || symptom.equals("ERROR") || symptom.equals("TIMEOUT")) {
+				score += 15;
+			}
+			if (symptom.equals("UNAUTHORIZED") || symptom.equals("STATE_NOT_UPDATED")) {
+				score += 10;
+			}
+		}
+		for (String domain : preparation.candidateDomains()) {
+			String normalized = domain.toLowerCase();
+			if (normalized.contains("payment") || normalized.contains("auth") || normalized.contains("order")) {
 				score += 10;
 			}
 		}
 		return clamp(score);
+	}
+
+	private List<String> searchTerms(ReportSearchPreparation preparation) {
+		return java.util.stream.Stream.concat(preparation.businessTerms().stream(), preparation.codeSearchTerms().stream())
+				.distinct()
+				.toList();
+	}
+
+	private String reportType(ReportSearchPreparation preparation) {
+		return preparation.reportType() == null || preparation.reportType().isBlank() ? "UNKNOWN" : preparation.reportType();
 	}
 
 	private int clamp(int score) {

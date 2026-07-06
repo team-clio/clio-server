@@ -11,7 +11,7 @@
 - 개발자가 원인을 모르는 상태에서 작성한 리포트
 - 개발자가 특정 코드나 모듈을 지목한 리포트
 
-따라서 리포트 원문을 그대로 코드 검색에 사용하는 방식은 부족하다.
+따라서 리포트 원문만 그대로 코드 검색에 사용하는 방식은 부족할 수 있다. 다만 원문 검색도 버리지는 않는다. 이 서비스의 목적은 등록된 코드베이스를 보고 판단하는 것이므로, 초기 리포트 전처리는 코드 탐색 전체 계획이 아니라 검색 입력 정규화로 제한한다.
 
 예시:
 
@@ -39,6 +39,7 @@ Portfolio 수익률 계산이 Redis 캐시와 불일치합니다.
 ```text
 Clio는 하나의 검색 방식에 의존하지 않는다.
 일반 사용자 언어와 개발자 언어를 모두 처리하기 위해 하이브리드 분석 파이프라인을 사용한다.
+리포트 전처리는 자연어를 보기 좋게 정리하는 작업이 아니라, 원문 검색과 비교 가능한 검색 입력을 만드는 작업이다.
 ```
 
 ## 2. RAG와 Agentic Search 역할 분리
@@ -112,7 +113,7 @@ Clio는 다음 구조를 목표로 한다.
 
 ```text
 BugReport
--> Report Structuring
+-> Search Input Normalization
 -> Multi Search
 -> Agentic Expansion
 -> Evidence Merge
@@ -122,29 +123,25 @@ BugReport
 -> Grounding Check
 ```
 
-## 4. Report Structuring
+## 4. Search Input Normalization
 
-리포트 원문은 바로 검색하지 않고 먼저 구조화한다.
+리포트 원문은 검색 입력 중 하나로 유지한다. 동시에 코드 검색 품질을 높이기 위한 정규화 입력을 만든다.
 
 목표:
 
 - 일반 사용자 언어를 코드 검색 가능한 형태로 바꾼다.
 - 개발자 리포트에 포함된 기술 단서를 보존한다.
-- 검색 query를 여러 종류로 확장한다.
+- 검색 query와 코드베이스 도메인 후보 매칭에 필요한 단서를 만든다.
 
 추출할 정보:
 
-- 사용자 행동
-- 기대 결과
-- 실제 결과
 - 증상
 - 도메인 후보
 - 비즈니스 키워드
 - 기술 키워드
-- 상태값 후보
 - 에러 메시지 후보
-- 재현 조건
-- 심각도 힌트
+- 코드 검색어 후보
+- 코드베이스 도메인 후보와 매칭할 비즈니스 용어
 
 예시:
 
@@ -152,27 +149,77 @@ BugReport
 입력:
 결제는 됐는데 주문 내역에는 안 떠요.
 
-구조화 결과:
+검색 입력 정규화 결과:
 - 도메인 후보: 결제, 주문
-- 사용자 행동: 결제 완료
-- 기대 결과: 주문 내역 표시
-- 실제 결과: 주문 내역 미표시
 - 비즈니스 키워드: 결제, 주문, 주문 내역
 - 기술 키워드 후보: payment, order, history, status
-- 검색 후보: Payment, Order, OrderHistory, PaymentWebhook
+- 코드 검색어 후보: payment, order, order history, order status, payment webhook
+- 코드베이스 도메인 후보 매칭: Payment, Order
 ```
 
-초기 구현:
+중요한 제약:
 
-- rule-based
-- 도메인 사전 기반
-- 키워드 매핑 기반
+- 코드 탐색 전 단계에서 실제 관련 클래스명을 단정하면 안 된다.
+- LLM이 기술 키워드나 클래스명을 지어낼 수 있으므로 이후 symbol index와 대조해야 한다.
+- 정규화 결과는 검색 입력이지 최종 근거가 아니다.
+
+초기 구현 방향:
+
+- LLM 검색어 확장을 목표로 한다.
+- 필드명과 enum은 영어로 둔다.
+- 설명과 문서는 한글로 작성한다.
+- 리포트 구조화는 LLM으로 수행한다.
+- rule-based 구조화 fallback은 두지 않는다.
 
 고도화:
 
-- LLM 기반 구조화
+- LLM 기반 검색어 확장 품질 개선
 - strict JSON schema 사용
-- 실패 시 rule-based fallback
+- 사용자가 LLM 설정을 선택하지 않으면 RAW_ONLY 검색으로 실행한다.
+- 사용자가 LLM 설정을 선택했는데 호출에 실패하면 분석 Job을 실패 처리한다.
+
+## 4.1 Search Input Normalization 방향
+
+리포트 전처리 결과는 코드 탐색 계획 전체가 아니라 검색 입력으로 쓰인다.
+
+초기 검색 입력은 과하게 많은 힌트를 두지 않는다.
+리포트에서 바로 확정하기 어려운 필드는 LLM 환각 가능성을 키우고, 이후 검색 결과를 오히려 오염시킬 수 있다.
+
+초기에는 다음 6개 필드만 검색 입력으로 둔다.
+
+```json
+{
+  "reportType": "USER_REPORT",
+  "businessTerms": ["결제", "주문 내역"],
+  "candidateDomains": ["Payment", "Order"],
+  "symptoms": ["NOT_VISIBLE"],
+  "codeSearchTerms": ["payment", "order", "history", "status", "webhook"],
+  "confidence": "MEDIUM"
+}
+```
+
+검색 모드는 비교 가능해야 한다.
+
+```text
+RAW_ONLY
+PREPARED_ONLY
+HYBRID
+```
+
+필드명과 enum은 영어로 유지한다. 사람이 읽는 설명과 문서는 한글로 작성한다.
+
+`candidateDomains`는 LLM이 자유롭게 만들어내지 않는다.
+먼저 코드베이스에서 도메인 후보를 추출하고, 리포트의 business term과 code search term을 그 후보에 매칭해서 만든다.
+
+초기 구현에서 제외하는 필드:
+
+- `entryPointHints`
+- `flowHints`
+- `stateHints`
+- `testSearchHints`
+
+이 필드들은 유용할 수 있지만, 리포트만 보고 확정하기 어렵다.
+초기에는 검색 결과와 실제 코드 근거가 쌓인 뒤 후속 단계에서 계산하거나 보강한다.
 
 ## 5. Multi Search
 
@@ -439,7 +486,8 @@ LLM을 사용하는 경우 반드시 근거 검증을 수행한다.
 
 ```text
 keyword only
-structured query + keyword
+raw report only
+prepared query + keyword
 symbol search
 vector search
 hybrid search
