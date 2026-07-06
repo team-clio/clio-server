@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class CodebaseDomainCandidateProvider {
 
+	private static final int MAX_CANDIDATES = 80;
+
 	private static final List<String> TECHNICAL_SUFFIXES = List.of(
 			"Controller",
 			"Service",
@@ -35,13 +37,16 @@ public class CodebaseDomainCandidateProvider {
 
 	public List<String> findCandidates(Long projectId) {
 		Set<String> candidates = new LinkedHashSet<>();
-		for (CodeSymbol symbol : codeSymbolRepository.findByProjectId(projectId)) {
+		for (CodeSymbol symbol : codeSymbolRepository.findByProjectIdOrderByFilePathAscStartLineAsc(projectId)) {
 			if (!isDomainCandidate(symbol)) {
 				continue;
 			}
 			String baseName = stripTechnicalSuffix(symbol.getName());
 			if (baseName.length() >= 3) {
 				candidates.add(baseName);
+			}
+			if (candidates.size() >= MAX_CANDIDATES) {
+				break;
 			}
 		}
 		return List.copyOf(candidates);
