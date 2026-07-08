@@ -1,8 +1,11 @@
 package ax.clio.analysis;
 
 import java.time.Instant;
+import java.util.List;
 
 import ax.clio.report.BugReport;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -107,10 +110,34 @@ public class AnalysisJob {
 		this.keywords = draft.keywords();
 		this.domains = draft.domains();
 		this.summary = draft.summary();
-		this.relatedCode = draft.relatedCode();
+		this.relatedCode = serializeRelatedCode(draft.relatedCode());
 		this.rationale = draft.rationale();
 		this.recommendedFix = draft.recommendedFix();
 		this.recommendedTests = draft.recommendedTests();
+	}
+
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+	private String serializeRelatedCode(List<RelatedCodeEntry> entries) {
+		if (entries == null || entries.isEmpty()) {
+			return "[]";
+		}
+		try {
+			return OBJECT_MAPPER.writeValueAsString(entries);
+		} catch (JsonProcessingException e) {
+			return "[]";
+		}
+	}
+
+	public List<RelatedCodeEntry> getRelatedCodeEntries() {
+		if (relatedCode == null || relatedCode.isBlank()) {
+			return List.of();
+		}
+		try {
+			return List.of(OBJECT_MAPPER.readValue(relatedCode, RelatedCodeEntry[].class));
+		} catch (JsonProcessingException e) {
+			return List.of();
+		}
 	}
 
 	public void fail(String failureReason) {

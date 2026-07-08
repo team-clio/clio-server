@@ -3,9 +3,6 @@ package ax.clio.analysis;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import ax.clio.code.CodeSearchResult;
-import ax.clio.code.CodeSearchService;
-import ax.clio.code.CodeSymbolType;
 import ax.clio.llm.LlmConfig;
 import ax.clio.llm.LlmConfigService;
 import ax.clio.report.BugReport;
@@ -17,16 +14,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class AnalysisWorker {
 
 	private final AnalysisJobRepository analysisJobRepository;
-	private final CodeSearchService codeSearchService;
+	private final CodeCandidateRanker codeCandidateRanker;
 	private final ReportSearchInputBuilder searchInputBuilder;
 	private final ReportSearchPreparer reportSearchPreparer;
 	private final LlmConfigService llmConfigService;
 
-	public AnalysisWorker(AnalysisJobRepository analysisJobRepository, CodeSearchService codeSearchService,
+	public AnalysisWorker(AnalysisJobRepository analysisJobRepository, CodeCandidateRanker codeCandidateRanker,
 			ReportSearchInputBuilder searchInputBuilder, ReportSearchPreparer reportSearchPreparer,
 			LlmConfigService llmConfigService) {
 		this.analysisJobRepository = analysisJobRepository;
-		this.codeSearchService = codeSearchService;
+		this.codeCandidateRanker = codeCandidateRanker;
 		this.searchInputBuilder = searchInputBuilder;
 		this.reportSearchPreparer = reportSearchPreparer;
 		this.llmConfigService = llmConfigService;
@@ -42,8 +39,8 @@ public class AnalysisWorker {
 			BugReport report = job.getReport();
 			ReportSearchPreparation preparation = prepare(report, job);
 			List<ReportSearchInput> searchInputs = searchInputBuilder.build(report, preparation, job.getSearchMode());
-			List<CodeSearchResult> relatedCode = searchRelatedCode(report.getProject().getId(), searchInputs);
-			AnalysisResultDraft draft = buildDraft(report, preparation, relatedCode);
+			List<RankedCodeCandidate> candidates = codeCandidateRanker.rank(report.getProject().getId(), searchInputs);
+			AnalysisResultDraft draft = buildDraft(report, preparation, candidates);
 
 			job.complete(draft);
 			report.changeStatus(BugReportStatus.COMPLETED);
@@ -61,48 +58,33 @@ public class AnalysisWorker {
 		return reportSearchPreparer.prepare(report, config, job.getLlmModel());
 	}
 
-	private List<CodeSearchResult> searchRelatedCode(Long projectId, List<ReportSearchInput> searchInputs) {
-		return searchInputs.stream()
-				.flatMap(input -> codeSearchService.search(projectId, input.query(), 10).stream())
-				.collect(Collectors.toMap(
-						result -> result.filePath() + ":" + result.lineNumber() + ":" + result.matchType(),
-						result -> result,
-						(left, right) -> left.score() >= right.score() ? left : right
-				))
-				.values()
-				.stream()
-				.sorted((left, right) -> Integer.compare(right.score(), left.score()))
-				.limit(20)
-				.toList();
-	}
-
 	private AnalysisResultDraft buildDraft(BugReport report, ReportSearchPreparation preparation,
-			List<CodeSearchResult> relatedCode) {
-		long relatedFileCount = relatedCode.stream().map(CodeSearchResult::filePath).distinct().count();
-		boolean hasRelatedTest = relatedCode.stream().anyMatch(CodeSearchResult::test);
-		boolean touchesEntity = relatedCode.stream().anyMatch(result -> result.symbolType() == CodeSymbolType.CLASS
-				&& result.snippet() != null
-				&& result.snippet().toLowerCase().contains("entity"));
-		boolean touchesRepository = relatedCode.stream().anyMatch(result -> result.filePath().toLowerCase().contains("repository"));
+			List<RankedCodeCandidate> candidates) {
+		long relatedFileCount = candidates.stream().map(RankedCodeCandidate::filePath).distinct().count();
+		boolean touchesEntity = candidates.stream()
+				.anyMatch(c -> "ENTITY".equals(c.symbolRole()));
+		boolean touchesRepository = candidates.stream()
+				.anyMatch(c -> "REPOSITORY".equals(c.symbolRole()));
 
 		int importance = scoreImportance(preparation);
-		int difficulty = clamp(25 + (int) relatedFileCount * 8 + preparation.candidateDomains().size() * 10
-				+ (hasRelatedTest ? 0 : 10));
-		int risk = clamp(20 + preparation.candidateDomains().size() * 12 + (touchesEntity ? 20 : 0) + (touchesRepository ? 15 : 0)
-				+ (hasRelatedTest ? 0 : 15));
+		int difficulty = clamp(25 + (int) relatedFileCount * 8
+				+ preparation.candidateDomains().size() * 10);
+		int risk = clamp(20 + preparation.candidateDomains().size() * 12
+				+ (touchesEntity ? 20 : 0)
+				+ (touchesRepository ? 15 : 0));
 
-		String related = relatedCode.stream()
-				.map(result -> "- " + result.filePath() + ":" + result.lineNumber()
-						+ " [" + result.matchType() + ", score=" + result.score() + "] "
-						+ nullToEmpty(result.snippet()))
-				.collect(Collectors.joining("\n"));
+		List<RelatedCodeEntry> entries = candidates.stream()
+				.map(c -> new RelatedCodeEntry(
+						c.filePath(), c.symbolName(), c.symbolRole(),
+						c.matchType() != null ? c.matchType().name() : null,
+						c.lineNumber(), c.snippet(), c.adjustedScore(), c.hitCount()))
+				.toList();
 
 		String rationale = String.join("\n",
 				"- 관련 파일 수: " + relatedFileCount,
 				"- 후보 도메인: " + emptyAsDash(preparation.candidateDomains()),
 				"- 검색어: " + emptyAsDash(preparation.codeSearchTerms()),
 				"- 검색 입력 신뢰도: " + preparation.confidence(),
-				"- 관련 테스트 코드 발견: " + (hasRelatedTest ? "예" : "아니오"),
 				"- Repository 관련 코드 포함: " + (touchesRepository ? "예" : "아니오"),
 				"- Entity 변경 가능성 신호: " + (touchesEntity ? "예" : "아니오")
 		);
@@ -111,9 +93,7 @@ public class AnalysisWorker {
 				+ " 입력으로 해석되며, " + relatedFileCount + "개 파일 후보와 연결되었습니다.";
 
 		String recommendedFix = "상위 점수 관련 코드부터 재현 경로를 확인하고, Controller-Service-Repository 흐름에서 상태 변경 또는 예외 처리 누락을 우선 검토하세요.";
-		String recommendedTests = hasRelatedTest
-				? "기존 관련 테스트를 확장해 리포트 재현 케이스와 회귀 케이스를 추가하세요."
-				: "관련 테스트가 부족합니다. 서비스 단위 테스트와 주요 흐름 통합 테스트를 먼저 추가하세요.";
+		String recommendedTests = "서비스 단위 테스트와 주요 흐름 통합 테스트를 추가하세요.";
 
 		return new AnalysisResultDraft(
 				importance,
@@ -123,7 +103,7 @@ public class AnalysisWorker {
 				String.join(",", searchTerms(preparation)),
 				String.join(",", preparation.candidateDomains()),
 				summary,
-				related,
+				entries,
 				rationale,
 				recommendedFix,
 				recommendedTests
@@ -165,9 +145,5 @@ public class AnalysisWorker {
 
 	private String emptyAsDash(List<String> values) {
 		return values.isEmpty() ? "-" : String.join(",", values);
-	}
-
-	private String nullToEmpty(String value) {
-		return value == null ? "" : value;
 	}
 }

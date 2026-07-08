@@ -1,6 +1,7 @@
 package ax.clio.analysis;
 
 import java.time.Instant;
+import java.util.List;
 
 public record AnalysisJobResponse(
 		Long id,
@@ -20,7 +21,7 @@ public record AnalysisJobResponse(
 		String keywords,
 		String domains,
 		String summary,
-		String relatedCode,
+		List<RelatedCodeEntry> relatedCode,
 		String rationale,
 		String recommendedFix,
 		String recommendedTests
@@ -45,7 +46,7 @@ public record AnalysisJobResponse(
 				job.getKeywords(),
 				job.getDomains(),
 				job.getSummary(),
-				job.getRelatedCode(),
+				job.getRelatedCodeEntries(),
 				job.getRationale(),
 				job.getRecommendedFix(),
 				job.getRecommendedTests()

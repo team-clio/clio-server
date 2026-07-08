@@ -58,6 +58,7 @@ public class CodeSearchService {
 						symbol.getFile().getPath(),
 						symbol.getName(),
 						symbol.getType(),
+						symbol.getRole(),
 						matchType(symbol, query),
 						symbol.getStartLine(),
 						symbol.getName(),
@@ -114,6 +115,7 @@ public class CodeSearchService {
 						results.add(new CodeSearchResult(
 								codeFile.getId(),
 								codeFile.getPath(),
+								null,
 								null,
 								null,
 								CodeSearchMatchType.CODE_TEXT,
