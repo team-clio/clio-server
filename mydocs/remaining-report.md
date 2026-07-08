@@ -64,6 +64,8 @@ Agentic Code Analysis
   - API key 마스킹
   - LLM 설정 수정 정책
   - 코드베이스 도메인 후보 정렬/제한
+- 버그 리포트 기반 코드 후보 탐색 개선 (랭킹 파이프라인, PR #3 머지)
+- 관련 코드 분석 흐름 추적 (Controller-Service-Repository, import 기반 의존 그래프)
 
 ## 현재 문서 상태
 
@@ -232,9 +234,9 @@ RAG/LLM 적용 후 비교 실험을 수행한다.
 완료: RAW_ONLY / PREPARED_ONLY / HYBRID 분석 실행 옵션 추가
 완료: Copilot PR 리뷰 대응 및 테스트 통과
 완료: LLM 검색 입력 schema 검증 강화
-다음: 버그 리포트 기반 코드 후보 탐색 개선
-대기: Code Chunk / Vector Search
-대기: 관련 코드 분석 흐름 추적
+완료: 버그 리포트 기반 코드 후보 탐색 개선
+완료: 관련 코드 분석 흐름 추적
+다음: Code Chunk / Vector Search
 대기: Hybrid Rerank
 대기: LLM 리포트 생성
 대기: 벤치마크
