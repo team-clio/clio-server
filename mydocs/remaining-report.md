@@ -64,6 +64,15 @@ Agentic Code Analysis
   - API key 마스킹
   - LLM 설정 수정 정책
   - 코드베이스 도메인 후보 정렬/제한
+- 버그 리포트 기반 코드 후보 탐색 개선 (PR #3)
+  - 검색 결과 랭킹 파이프라인(CodeCandidateRanker) 도입
+  - 검색 입력 타입별 가중치 + 다중 입력 반복 등장(hitCount) 가산점
+  - 파일 단위 그룹화 및 대표 결과 선정
+  - symbolRole 기반 Entity/Repository 판단
+  - 관련 테스트 분리, 점수화 근거 강화
+  - relatedCode를 RelatedCodeEntry JSON으로 구조화 저장
+  - 랭킹 품질 평가 harness(git-mined 정답셋, Recall@k/MRR/MAP) 추가
+  - 점수 weight 튜닝(D11)은 MVP 이후로 미룸 → `mydocs/task-search-improvement/06-tuning-backlog.md`
 
 ## 현재 문서 상태
 
@@ -146,9 +155,21 @@ Agentic Code Analysis
 - LangGraph
 - LLM 리포트 생성
 
-### 3. Code Chunk / Vector Search
+### 3. 관련 코드 분석 흐름 추적
 
-RAG를 붙이기 위한 기반이다.
+검색된 후보 주변의 실제 코드 흐름을 확장한다.
+rule-based MVP 범위 안에서 진행하며, 벡터/RAG보다 먼저 한다.
+
+해야 할 일:
+
+- Controller-Service-Repository 흐름 추적
+- Entity 연결
+- 관련 테스트 탐색 (미뤄둔 D9-B: 테스트가 실제로 대상 클래스를 참조하는지 확인)
+- import/constructor/field 기반 의존 관계 추적
+
+### 4. Code Chunk / Vector Search
+
+RAG를 붙이기 위한 기반이다. rule-based MVP가 안정된 뒤 진행한다.
 
 해야 할 일:
 
@@ -157,17 +178,6 @@ RAG를 붙이기 위한 기반이다.
 - embedding 생성
 - vector search 구현
 - chunk 품질 확인
-
-### 4. 관련 코드 분석 흐름 추적
-
-검색된 후보 주변의 실제 코드 흐름을 확장한다.
-
-해야 할 일:
-
-- Controller-Service-Repository 흐름 추적
-- Entity 연결
-- 관련 테스트 탐색
-- import/constructor/field 기반 의존 관계 추적
 
 ### 5. Hybrid Rerank
 
@@ -232,9 +242,9 @@ RAG/LLM 적용 후 비교 실험을 수행한다.
 완료: RAW_ONLY / PREPARED_ONLY / HYBRID 분석 실행 옵션 추가
 완료: Copilot PR 리뷰 대응 및 테스트 통과
 완료: LLM 검색 입력 schema 검증 강화
-다음: 버그 리포트 기반 코드 후보 탐색 개선
-대기: Code Chunk / Vector Search
-대기: 관련 코드 분석 흐름 추적
+완료: 버그 리포트 기반 코드 후보 탐색 개선 (PR #3)
+완료: 관련 코드 분석 흐름 추적 (Controller-Service-Repository, PR #4)
+다음: Code Chunk / Vector Search
 대기: Hybrid Rerank
 대기: LLM 리포트 생성
 대기: 벤치마크

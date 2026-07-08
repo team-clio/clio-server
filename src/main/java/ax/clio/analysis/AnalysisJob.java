@@ -74,6 +74,9 @@ public class AnalysisJob {
 	@Column(length = 10000)
 	private String relatedCode;
 
+	@Column(length = 10000)
+	private String flows;
+
 	@Column(length = 4000)
 	private String rationale;
 
@@ -111,6 +114,7 @@ public class AnalysisJob {
 		this.domains = draft.domains();
 		this.summary = draft.summary();
 		this.relatedCode = serializeRelatedCode(draft.relatedCode());
+		this.flows = serializeFlows(draft.flows());
 		this.rationale = draft.rationale();
 		this.recommendedFix = draft.recommendedFix();
 		this.recommendedTests = draft.recommendedTests();
@@ -135,6 +139,28 @@ public class AnalysisJob {
 		}
 		try {
 			return List.of(OBJECT_MAPPER.readValue(relatedCode, RelatedCodeEntry[].class));
+		} catch (JsonProcessingException e) {
+			return List.of();
+		}
+	}
+
+	private String serializeFlows(List<CodeFlow> flowList) {
+		if (flowList == null || flowList.isEmpty()) {
+			return "[]";
+		}
+		try {
+			return OBJECT_MAPPER.writeValueAsString(flowList);
+		} catch (JsonProcessingException e) {
+			return "[]";
+		}
+	}
+
+	public List<CodeFlow> getFlows() {
+		if (flows == null || flows.isBlank()) {
+			return List.of();
+		}
+		try {
+			return List.of(OBJECT_MAPPER.readValue(flows, CodeFlow[].class));
 		} catch (JsonProcessingException e) {
 			return List.of();
 		}
