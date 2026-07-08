@@ -1,5 +1,7 @@
 package ax.clio.analysis;
 
+import java.util.List;
+
 public record AnalysisResultDraft(
 		int importanceScore,
 		int difficultyScore,
@@ -8,7 +10,7 @@ public record AnalysisResultDraft(
 		String keywords,
 		String domains,
 		String summary,
-		String relatedCode,
+		List<RelatedCodeEntry> relatedCode,
 		String rationale,
 		String recommendedFix,
 		String recommendedTests

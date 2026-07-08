@@ -5,6 +5,7 @@ public record CodeSearchResult(
 		String filePath,
 		String symbolName,
 		CodeSymbolType symbolType,
+		String symbolRole,
 		CodeSearchMatchType matchType,
 		Integer lineNumber,
 		String snippet,
