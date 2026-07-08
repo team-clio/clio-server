@@ -22,6 +22,7 @@ public record AnalysisJobResponse(
 		String domains,
 		String summary,
 		List<RelatedCodeEntry> relatedCode,
+		List<CodeFlow> flows,
 		String rationale,
 		String recommendedFix,
 		String recommendedTests
@@ -47,6 +48,7 @@ public record AnalysisJobResponse(
 				job.getDomains(),
 				job.getSummary(),
 				job.getRelatedCodeEntries(),
+				job.getFlows(),
 				job.getRationale(),
 				job.getRecommendedFix(),
 				job.getRecommendedTests()

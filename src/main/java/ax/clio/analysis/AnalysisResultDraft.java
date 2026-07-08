@@ -11,6 +11,7 @@ public record AnalysisResultDraft(
 		String domains,
 		String summary,
 		List<RelatedCodeEntry> relatedCode,
+		List<CodeFlow> flows,
 		String rationale,
 		String recommendedFix,
 		String recommendedTests
