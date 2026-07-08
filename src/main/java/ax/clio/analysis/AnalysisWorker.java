@@ -15,15 +15,17 @@ public class AnalysisWorker {
 
 	private final AnalysisJobRepository analysisJobRepository;
 	private final CodeCandidateRanker codeCandidateRanker;
+	private final FlowTracer flowTracer;
 	private final ReportSearchInputBuilder searchInputBuilder;
 	private final ReportSearchPreparer reportSearchPreparer;
 	private final LlmConfigService llmConfigService;
 
 	public AnalysisWorker(AnalysisJobRepository analysisJobRepository, CodeCandidateRanker codeCandidateRanker,
-			ReportSearchInputBuilder searchInputBuilder, ReportSearchPreparer reportSearchPreparer,
+			FlowTracer flowTracer, ReportSearchInputBuilder searchInputBuilder, ReportSearchPreparer reportSearchPreparer,
 			LlmConfigService llmConfigService) {
 		this.analysisJobRepository = analysisJobRepository;
 		this.codeCandidateRanker = codeCandidateRanker;
+		this.flowTracer = flowTracer;
 		this.searchInputBuilder = searchInputBuilder;
 		this.reportSearchPreparer = reportSearchPreparer;
 		this.llmConfigService = llmConfigService;
@@ -40,7 +42,9 @@ public class AnalysisWorker {
 			ReportSearchPreparation preparation = prepare(report, job);
 			List<ReportSearchInput> searchInputs = searchInputBuilder.build(report, preparation, job.getSearchMode());
 			List<RankedCodeCandidate> candidates = codeCandidateRanker.rank(report.getProject().getId(), searchInputs);
-			AnalysisResultDraft draft = buildDraft(report, preparation, candidates);
+			List<String> candidatePaths = candidates.stream().map(RankedCodeCandidate::filePath).distinct().toList();
+			List<CodeFlow> flows = flowTracer.trace(report.getProject().getId(), candidatePaths);
+			AnalysisResultDraft draft = buildDraft(report, preparation, candidates, flows);
 
 			job.complete(draft);
 			report.changeStatus(BugReportStatus.COMPLETED);
@@ -59,16 +63,23 @@ public class AnalysisWorker {
 	}
 
 	private AnalysisResultDraft buildDraft(BugReport report, ReportSearchPreparation preparation,
-			List<RankedCodeCandidate> candidates) {
+			List<RankedCodeCandidate> candidates, List<CodeFlow> flows) {
 		long relatedFileCount = candidates.stream().map(RankedCodeCandidate::filePath).distinct().count();
 		boolean touchesEntity = candidates.stream()
 				.anyMatch(c -> "ENTITY".equals(c.symbolRole()));
 		boolean touchesRepository = candidates.stream()
 				.anyMatch(c -> "REPOSITORY".equals(c.symbolRole()));
 
+		// 흐름이 걸친 서로 다른 레이어 수(넓게 걸칠수록 수정 범위가 크다)
+		int maxFlowLayerSpan = flows.stream()
+				.mapToInt(AnalysisWorker::layerSpan)
+				.max()
+				.orElse(0);
+
 		int importance = scoreImportance(preparation);
 		int difficulty = clamp(25 + (int) relatedFileCount * 8
-				+ preparation.candidateDomains().size() * 10);
+				+ preparation.candidateDomains().size() * 10
+				+ maxFlowLayerSpan * 5);
 		int risk = clamp(20 + preparation.candidateDomains().size() * 12
 				+ (touchesEntity ? 20 : 0)
 				+ (touchesRepository ? 15 : 0));
@@ -86,7 +97,8 @@ public class AnalysisWorker {
 				"- 검색어: " + emptyAsDash(preparation.codeSearchTerms()),
 				"- 검색 입력 신뢰도: " + preparation.confidence(),
 				"- Repository 관련 코드 포함: " + (touchesRepository ? "예" : "아니오"),
-				"- Entity 변경 가능성 신호: " + (touchesEntity ? "예" : "아니오")
+				"- Entity 변경 가능성 신호: " + (touchesEntity ? "예" : "아니오"),
+				"- 영향 흐름: " + describeFlows(flows)
 		);
 
 		String summary = "리포트 '" + report.getTitle() + "'는 " + reportType(preparation)
@@ -104,10 +116,28 @@ public class AnalysisWorker {
 				String.join(",", preparation.candidateDomains()),
 				summary,
 				entries,
+				flows,
 				rationale,
 				recommendedFix,
 				recommendedTests
 		);
+	}
+
+	private static int layerSpan(CodeFlow flow) {
+		long distinctLayers = flow.nodes().stream()
+				.map(FlowNode::role)
+				.map(CodeDependencyGraph::layerOf)
+				.filter(layer -> layer != CodeDependencyGraph.UNKNOWN_LAYER)
+				.distinct()
+				.count();
+		return (int) distinctLayers;
+	}
+
+	private String describeFlows(List<CodeFlow> flows) {
+		if (flows.isEmpty()) {
+			return "-";
+		}
+		return flows.stream().map(CodeFlow::describe).collect(Collectors.joining(" | "));
 	}
 
 	private int scoreImportance(ReportSearchPreparation preparation) {
