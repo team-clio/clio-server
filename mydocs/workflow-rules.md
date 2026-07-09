@@ -21,7 +21,7 @@
 04-result.md      최종 변경 요약·테스트 결과·남은 과제
 ```
 
-진행 상태는 `mydocs/remaining-report.md` 한 곳에서만 갱신한다.
+개발 순서와 진행 상태는 `mydocs/remaining-roadmap.md`의 "7. 추천 개발 순서" 한 곳에서만 갱신한다.
 
 ## 단계별 절차와 게이트(gate)
 
@@ -52,7 +52,7 @@
 ### 4단계. Result
 
 - 모든 결정과 구현이 끝나면 `04-result.md`에 최종 결과를 남긴다.
-- `remaining-report.md` 진행 상태를 갱신한다.
+- `remaining-roadmap.md`의 "7. 추천 개발 순서" 진행 상태를 갱신한다.
 - 커밋: `docs: <작업> result 및 진행 상태 갱신`
 
 ## 커밋·브랜치 규칙
@@ -77,6 +77,6 @@
 [ ] 01-overview 작성 → 사용자 컨펌 → 커밋
 [ ] 02-plan 작성 (결정 포인트 목록 포함) → 사용자 컨펌 → 커밋
 [ ] 결정 포인트 1개씩: 사용자 결정 → 03-decisions 기록 → 구현 → 커밋   (반복)
-[ ] 04-result 작성 + remaining-report 갱신 → 커밋
+[ ] 04-result 작성 + roadmap 진행 상태 갱신 → 커밋
 [ ] PR (base=main)
 ```
