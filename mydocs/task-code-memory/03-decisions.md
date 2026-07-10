@@ -87,3 +87,29 @@
 - **파일 변경/이동에도 검색이 안 깨지는 게 크다** — 스캔 시점 스냅샷을 chunk가 자체 보유.
 
 ---
+
+## D3. Embedding 소스
+
+**후보**
+- (a) 실제 embedding API만 (`/embeddings`, `LlmConfig` 재사용).
+- (b) 결정적 로컬 대체만 (토큰 해시/bag-of-tokens, 외부 의존 0).
+- (c) 인터페이스 + 두 구현 (로컬 기본, API 옵션).
+
+**선택: (c) `EmbeddingClient` 인터페이스 + 로컬 결정적 구현(기본) + OpenAI호환 API 구현(설정 시)**
+
+**이유**
+- 외부 키·비용 없이 **전체 파이프라인과 테스트가 H2에서 결정적으로** 돈다(#7 완료기준).
+- API 구현은 신규 배선이 거의 없음 — 기존 `OpenAiCompatibleLlmClient`(RestClient+`LlmConfig`, Bearer)를
+  그대로 미러링하고 endpoint만 `/embeddings`(`{"model","input"}` → `{"data":[{"embedding":[...]}]}`)로 바꾸면 됨.
+- (a)만: 테스트가 외부 API/모킹에 묶임. (b)만: 실제 semantic 품질로 가는 길이 막힘.
+
+**정직한 한계(반드시 result에 명시)**
+- 로컬 결정적 구현(토큰 해시/bag-of-tokens)은 **의미 검색이 아니다** — "같은 토큰 겹침"이라 키워드 매칭의
+  벡터 버전일 뿐. "명사 자체가 다른 코드 찾기"(#7의 진짜 목표)는 로컬로는 **원리적으로 불가**.
+- 로컬 구현이 검증하는 것은 딱 하나: chunk→embed→저장→코사인 top-k→fallback **배선이 돈다**는 것.
+  실제 semantic 값은 `LlmConfig`에 embedding 설정을 줘서 API를 켤 때만 나온다.
+
+**영향**: S3에서 `EmbeddingClient`(범용, D0-B)를 두고 로컬 구현을 default 빈으로. API 구현은 config 존재 시 사용.
+D7(재생성)은 로컬이 싸서 스캔 시 전체 재생성이 무난하나, API를 켜면 비용/지연으로 재검토 트리거.
+
+---
