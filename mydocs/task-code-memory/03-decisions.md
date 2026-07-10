@@ -168,3 +168,24 @@ D7(재생성)은 로컬이 싸서 스캔 시 전체 재생성이 무난하나, A
 정규화 가중합으로 최소 결합. 임계 상수는 backlog 튜닝 대상.
 
 ---
+
+## D6. 분석 파이프라인 연동 지점
+
+**후보**
+- (a) `CodeCandidateRanker`에 fallback으로만 연동.
+- (b) `semanticSearch`를 범용 서비스로만 두고 분석 파이프라인 미변경(추후 MCP 툴 노출용).
+- (c) 둘 다.
+
+**선택: (c) 범용 서비스 구축 + `CodeCandidateRanker` fallback 연동**
+
+**이유**
+- (a)/(b)는 배타 선택이 아니라 **계층 관계** — 범용 `CodeMemorySearchService`(D0-B substrate)는 무조건 필요하고
+  (#8이 재사용), fallback 연동(a)은 그 서비스 **위에 얹힌다.** "둘 다"가 스코프 중복이 아님.
+- 실제 결정은 "이번에 ranker 연동까지 하느냐"인데, #7 완료기준이 *"분석 결과 후보에 벡터 기반 후보가 실제로
+  반영된다"*라 **연동을 이번에 해야 목표 달성.** (b)만 하면 substrate는 서지만 #7 성과가 분석에 안 드러남.
+- REST 신규 노출은 필요해질 때 후속(범위 밖).
+
+**연동 지점(코드 확인 완료)**: `CodeCandidateRanker.rank()` 1단계(키워드 누적) 뒤, 키워드 후보가 임계 미만(D5)이면
+`semanticSearch` 결과를 `SymbolAccumulator`에 보강 주입 → 기존 2·3단계(파일 그룹화/정렬)·흐름추적·draft 그대로 재사용.
+
+---
