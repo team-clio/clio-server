@@ -112,6 +112,13 @@
 **영향**: S3에서 `EmbeddingClient`(범용, D0-B)를 두고 로컬 구현을 default 빈으로. API 구현은 config 존재 시 사용.
 D7(재생성)은 로컬이 싸서 스캔 시 전체 재생성이 무난하나, API를 켜면 비용/지연으로 재검토 트리거.
 
+**D3-1. API embedding 자동선택·모델 정책 유예 (구현 중 발견)**
+- 문제: API 구현엔 "어떤 `LlmConfig`, 어떤 embedding 모델, 어떤 차원"을 쓸지 정책이 필요. `LlmConfig.defaultModel`은
+  chat 모델이라 embedding에 부적합. 이 정책은 아직 미결(작은 공백)이라 임의로 지어내지 않음.
+- **선택(S3 범위)**: `EmbeddingClient` 인터페이스 + `LocalEmbeddingClient`(활성 default 빈, CI/파이프라인용, 완전 테스트).
+  `OpenAiCompatibleEmbeddingClient`는 저수준 `(config, model, text)→벡터` 호출로 **구현·테스트만** 해두고
+  **활성 선택 배선은 D3-1 후속**으로. 후속에서 embedding 모델/차원 config 정책을 정하고 어댑터로 `EmbeddingClient`에 브리지.
+
 ---
 
 ## D4. 벡터 저장·유사도 검색 방식
