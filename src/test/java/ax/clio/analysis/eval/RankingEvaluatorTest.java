@@ -32,7 +32,7 @@ class RankingEvaluatorTest {
 		// Real builder + ranker so the test exercises the actual pipeline wiring.
 		evaluator = new RankingEvaluator(
 				new ReportSearchInputBuilder(),
-				new CodeCandidateRanker(codeSearchService),
+				new CodeCandidateRanker(codeSearchService, mock(ax.clio.memory.CodeMemorySearchService.class)),
 				RankingEvaluator.PreparationProvider.rawOnly());
 	}
 

@@ -125,20 +125,24 @@ PaymentController
 
 MVP가 실제 프로젝트에서 어느 정도 동작하는 것이 확인되면 RAG를 추가한다.
 
-### 3.1 Code Memory
+### 3.1 Code Memory  — 뼈대 구현 완료 (S1~S6, `mydocs/task-code-memory/`)
 
 코드를 chunk 단위로 저장하고 검색할 수 있게 만든다.
 
 해야 할 일:
 
-- 클래스/메서드 단위로 코드를 나눈다.
-- 코드 chunk를 저장한다.
-- chunk별 embedding을 만든다.
-- 키워드 검색과 벡터 검색을 함께 사용한다.
+- [x] 클래스/메서드 단위로 코드를 나눈다. (메서드 본문 + 클래스 헤더, `CodeChunker`)
+- [x] 코드 chunk를 저장한다. (`CodeChunk`, 본문 DB 저장)
+- [x] chunk별 embedding을 만든다. (`EmbeddingClient`: 로컬 기본/API 옵션)
+- [x] 키워드 검색과 벡터 검색을 함께 사용한다. (ranker semantic **fallback** — "필요할 때만 호출")
 
 목표:
 
 - 버그 리포트와 의미적으로 가까운 코드를 찾을 수 있어야 한다.
+  → **뼈대는 섬.** 단, 실제 의미검색은 API embedding을 켜야 유효(로컬은 배선 검증용). pgvector 실경로는
+  별도 벤치마크로 검증(미작성). 상세·한계는 `task-code-memory/04-result.md`.
+
+남은 backlog: pgvector 벤치마크 러너, API embedding 활성화(D3-1), ANN 인덱스, 임계 튜닝.
 
 ### 3.2 Issue Memory
 

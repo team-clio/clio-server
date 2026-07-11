@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.List;
 
 import ax.clio.common.BusinessException;
+import ax.clio.memory.CodeChunkIndexer;
 import ax.clio.project.Project;
 import ax.clio.project.ProjectService;
 import org.springframework.http.HttpStatus;
@@ -21,14 +22,17 @@ public class CodeAnalysisService {
 	private final JavaCodeIndexer javaCodeIndexer;
 	private final CodeFileRepository codeFileRepository;
 	private final CodeSymbolRepository codeSymbolRepository;
+	private final CodeChunkIndexer codeChunkIndexer;
 
 	public CodeAnalysisService(ProjectService projectService, CodeScanner codeScanner, JavaCodeIndexer javaCodeIndexer,
-			CodeFileRepository codeFileRepository, CodeSymbolRepository codeSymbolRepository) {
+			CodeFileRepository codeFileRepository, CodeSymbolRepository codeSymbolRepository,
+			CodeChunkIndexer codeChunkIndexer) {
 		this.projectService = projectService;
 		this.codeScanner = codeScanner;
 		this.javaCodeIndexer = javaCodeIndexer;
 		this.codeFileRepository = codeFileRepository;
 		this.codeSymbolRepository = codeSymbolRepository;
+		this.codeChunkIndexer = codeChunkIndexer;
 	}
 
 	@Transactional
@@ -36,13 +40,16 @@ public class CodeAnalysisService {
 		Project project = projectService.getProject(projectId);
 		Path rootPath = Path.of(project.getRootPath());
 
+		// D7: 스캔 시 전체 재생성. FK 순서상 chunk → symbol → file 순으로 삭제.
+		codeChunkIndexer.deleteByProjectId(projectId);
 		codeSymbolRepository.deleteByProjectId(projectId);
 		codeFileRepository.deleteByProjectId(projectId);
 
 		List<Path> javaFiles = codeScanner.scanJavaFiles(rootPath);
 		for (Path javaFile : javaFiles) {
 			CodeFile codeFile = saveCodeFile(project, rootPath, javaFile);
-			codeSymbolRepository.saveAll(javaCodeIndexer.index(project, codeFile, javaFile));
+			List<CodeSymbol> symbols = codeSymbolRepository.saveAll(javaCodeIndexer.index(project, codeFile, javaFile));
+			codeChunkIndexer.index(project, codeFile, readLines(javaFile), symbols);
 		}
 
 		return new CodeScanResult(
@@ -83,6 +90,14 @@ public class CodeAnalysisService {
 			return codeFileRepository.save(codeFile);
 		} catch (IOException exception) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, "Code file metadata cannot be read");
+		}
+	}
+
+	private List<String> readLines(Path javaFile) {
+		try {
+			return Files.readAllLines(javaFile);
+		} catch (IOException exception) {
+			return List.of();
 		}
 	}
 
