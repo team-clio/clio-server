@@ -42,9 +42,10 @@ public class LocalEmbeddingClient implements EmbeddingClient {
 	}
 
 	private static String[] tokenize(String text) {
-		// camelCase 경계에 공백 삽입 후 비영숫자로 분리, 소문자화.
+		// camelCase 경계에 공백 삽입 후, 유니코드 문자/숫자가 아닌 것으로 분리, 소문자화.
+		// (한글 등 비ASCII도 토큰으로 살린다 — 버그 리포트가 한글이므로 필수.)
 		String spaced = text.replaceAll("([a-z0-9])([A-Z])", "$1 $2");
-		return spaced.toLowerCase(Locale.ROOT).split("[^a-z0-9]+");
+		return spaced.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}]+");
 	}
 
 	private static float[] normalize(float[] vector) {
