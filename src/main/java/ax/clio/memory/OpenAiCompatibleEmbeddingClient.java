@@ -21,11 +21,10 @@ import org.springframework.web.client.RestClient;
 public class OpenAiCompatibleEmbeddingClient {
 
 	private final RestClient restClient;
-	private final ObjectMapper objectMapper;
+	private final ObjectMapper objectMapper = new ObjectMapper();
 
-	public OpenAiCompatibleEmbeddingClient(RestClient.Builder restClientBuilder, ObjectMapper objectMapper) {
+	public OpenAiCompatibleEmbeddingClient(RestClient.Builder restClientBuilder) {
 		this.restClient = restClientBuilder.build();
-		this.objectMapper = objectMapper;
 	}
 
 	public float[] embed(LlmConfig config, String model, String text) {
