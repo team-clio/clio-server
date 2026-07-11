@@ -86,6 +86,9 @@ public class AnalysisJob {
 	@Column(length = 4000)
 	private String recommendedTests;
 
+	@Column(length = 4000)
+	private String similarIssues;
+
 	protected AnalysisJob() {
 	}
 
@@ -118,6 +121,7 @@ public class AnalysisJob {
 		this.rationale = draft.rationale();
 		this.recommendedFix = draft.recommendedFix();
 		this.recommendedTests = draft.recommendedTests();
+		this.similarIssues = serializeSimilarIssues(draft.similarIssues());
 	}
 
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -161,6 +165,28 @@ public class AnalysisJob {
 		}
 		try {
 			return List.of(OBJECT_MAPPER.readValue(flows, CodeFlow[].class));
+		} catch (JsonProcessingException e) {
+			return List.of();
+		}
+	}
+
+	private String serializeSimilarIssues(List<SimilarIssueEntry> entries) {
+		if (entries == null || entries.isEmpty()) {
+			return "[]";
+		}
+		try {
+			return OBJECT_MAPPER.writeValueAsString(entries);
+		} catch (JsonProcessingException e) {
+			return "[]";
+		}
+	}
+
+	public List<SimilarIssueEntry> getSimilarIssues() {
+		if (similarIssues == null || similarIssues.isBlank()) {
+			return List.of();
+		}
+		try {
+			return List.of(OBJECT_MAPPER.readValue(similarIssues, SimilarIssueEntry[].class));
 		} catch (JsonProcessingException e) {
 			return List.of();
 		}

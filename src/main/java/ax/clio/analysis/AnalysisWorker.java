@@ -5,6 +5,8 @@ import java.util.stream.Collectors;
 
 import ax.clio.llm.LlmConfig;
 import ax.clio.llm.LlmConfigService;
+import ax.clio.memory.IssueMemoryService;
+import ax.clio.memory.ScoredIssue;
 import ax.clio.report.BugReport;
 import ax.clio.report.BugReportStatus;
 import org.springframework.stereotype.Component;
@@ -13,22 +15,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class AnalysisWorker {
 
+	private static final int SIMILAR_ISSUE_LIMIT = 3;
+
 	private final AnalysisJobRepository analysisJobRepository;
 	private final CodeCandidateRanker codeCandidateRanker;
 	private final FlowTracer flowTracer;
 	private final ReportSearchInputBuilder searchInputBuilder;
 	private final ReportSearchPreparer reportSearchPreparer;
 	private final LlmConfigService llmConfigService;
+	private final IssueMemoryService issueMemoryService;
 
 	public AnalysisWorker(AnalysisJobRepository analysisJobRepository, CodeCandidateRanker codeCandidateRanker,
 			FlowTracer flowTracer, ReportSearchInputBuilder searchInputBuilder, ReportSearchPreparer reportSearchPreparer,
-			LlmConfigService llmConfigService) {
+			LlmConfigService llmConfigService, IssueMemoryService issueMemoryService) {
 		this.analysisJobRepository = analysisJobRepository;
 		this.codeCandidateRanker = codeCandidateRanker;
 		this.flowTracer = flowTracer;
 		this.searchInputBuilder = searchInputBuilder;
 		this.reportSearchPreparer = reportSearchPreparer;
 		this.llmConfigService = llmConfigService;
+		this.issueMemoryService = issueMemoryService;
 	}
 
 	@Transactional
@@ -44,10 +50,14 @@ public class AnalysisWorker {
 			List<RankedCodeCandidate> candidates = codeCandidateRanker.rank(report.getProject().getId(), searchInputs);
 			List<String> candidatePaths = candidates.stream().map(RankedCodeCandidate::filePath).distinct().toList();
 			List<CodeFlow> flows = flowTracer.trace(report.getProject().getId(), candidatePaths);
-			AnalysisResultDraft draft = buildDraft(report, preparation, candidates, flows);
+			// #8: 유사 과거 이슈는 이번 리포트를 기억하기 전에 조회(과거분 기준). 자기 자신은 서비스가 제외.
+			List<ScoredIssue> similarIssues = issueMemoryService.findSimilar(report, SIMILAR_ISSUE_LIMIT);
+			AnalysisResultDraft draft = buildDraft(report, preparation, candidates, flows, similarIssues);
 
 			job.complete(draft);
 			report.changeStatus(BugReportStatus.COMPLETED);
+			// #8: 분석된 리포트를 Issue Memory에 기억(이후 리포트가 유사이슈로 찾을 수 있게).
+			issueMemoryService.remember(report);
 		} catch (Exception exception) {
 			job.fail(exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage());
 			job.getReport().changeStatus(BugReportStatus.FAILED);
@@ -63,7 +73,7 @@ public class AnalysisWorker {
 	}
 
 	private AnalysisResultDraft buildDraft(BugReport report, ReportSearchPreparation preparation,
-			List<RankedCodeCandidate> candidates, List<CodeFlow> flows) {
+			List<RankedCodeCandidate> candidates, List<CodeFlow> flows, List<ScoredIssue> similarIssues) {
 		long relatedFileCount = candidates.stream().map(RankedCodeCandidate::filePath).distinct().count();
 		boolean touchesEntity = candidates.stream()
 				.anyMatch(c -> "ENTITY".equals(c.symbolRole()));
@@ -107,6 +117,13 @@ public class AnalysisWorker {
 		String recommendedFix = "상위 점수 관련 코드부터 재현 경로를 확인하고, Controller-Service-Repository 흐름에서 상태 변경 또는 예외 처리 누락을 우선 검토하세요.";
 		String recommendedTests = "서비스 단위 테스트와 주요 흐름 통합 테스트를 추가하세요.";
 
+		List<SimilarIssueEntry> similarIssueEntries = similarIssues.stream()
+				.map(scored -> new SimilarIssueEntry(
+						scored.issue().getReport().getId(),
+						scored.issue().getTitleSnapshot(),
+						scored.score()))
+				.toList();
+
 		return new AnalysisResultDraft(
 				importance,
 				difficulty,
@@ -119,7 +136,8 @@ public class AnalysisWorker {
 				flows,
 				rationale,
 				recommendedFix,
-				recommendedTests
+				recommendedTests,
+				similarIssueEntries
 		);
 	}
 
