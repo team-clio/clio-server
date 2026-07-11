@@ -86,6 +86,14 @@ public class CodeChunk {
 		this.embedding = embedding;
 	}
 
+	/**
+	 * embedding을 나중에(스캔 파이프라인의 embed 단계, S3/S4) 부착한다. chunk 본문·메타는 S2에서 확정하고
+	 * embedding만 지연 계산하기 위한 뮤테이터.
+	 */
+	public void assignEmbedding(float[] embedding) {
+		this.embedding = embedding;
+	}
+
 	private static String truncate(String content) {
 		if (content == null || content.length() <= MAX_CONTENT_LENGTH) {
 			return content;
