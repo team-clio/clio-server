@@ -145,6 +145,18 @@ D7(재생성)은 로컬이 싸서 스캔 시 전체 재생성이 무난하나, A
   또는 `com.pgvector` 클라이언트 + 네이티브 쿼리), build.gradle 의존성. 스키마 마이그레이션 방식은 S4에서 확정.
 - CI 스텁 경로 ≠ 프로덕션 pgvector 경로 → pgvector 쿼리 회귀는 벤치마크가 잡는다(의도된 트레이드오프).
 
+**D4-1. pgvector 컬럼 × H2 DDL 충돌 해소 (구현 상세, S1을 가름)**
+- 문제: `ddl-auto: update`라 `@Entity`의 테이블을 Hibernate가 자동 생성. `CodeChunk`에 `vector(N)` 컬럼을 두면
+  **memory 테스트가 없어도** 다른 모든 H2 테스트 부팅 시 `create table ... vector(N)`이 H2에서 실패 → 전체 CI 붕괴.
+  즉 "테스트를 안 짜는 것"으로는 못 피함(DDL 자동생성이 원인).
+- **선택: 이식적 `real[]` 배열 컬럼 + 쿼리 시 vector 캐스팅**
+  - embedding은 `float[]` → SQL ARRAY 컬럼으로 저장(H2·Postgres 둘 다 생성 성공, DDL에 pgvector 타입 미등장).
+  - 유사도는 **벤치마크(비-CI) 네이티브 쿼리에서만** `embedding::vector <=> :q::vector`로 캐스팅해 진짜 pgvector
+    코사인 연산(exact scan) 수행. H2 경로엔 pgvector가 문자 그대로 안 닿음 = "pgvector는 CI 미테스트" 실현.
+  - 신규 Gradle 의존성 0, 신규 테스트 인프라 0.
+  - **미루는 것**: HNSW/ivfflat 인덱스(성능 최적화)만 backlog. 정밀도 검증엔 exact scan이 오히려 정확 → 손해 없음.
+    프로덕션 대규모 성능 필요 시 실제 `vector` 컬럼+인덱스로 승격(인터페이스로 격리).
+
 ---
 
 ## D5. semantic을 언제/어떻게 붙일까 (D0-A로 "항상 블렌딩"은 이미 배제)
