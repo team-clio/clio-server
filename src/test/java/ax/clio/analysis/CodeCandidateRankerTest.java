@@ -2,28 +2,39 @@ package ax.clio.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.List;
 
+import ax.clio.code.CodeFile;
 import ax.clio.code.CodeSearchMatchType;
 import ax.clio.code.CodeSearchResult;
 import ax.clio.code.CodeSearchService;
 import ax.clio.code.CodeSymbolType;
+import ax.clio.memory.CodeChunk;
+import ax.clio.memory.CodeChunkType;
+import ax.clio.memory.ScoredCodeChunk;
+import ax.clio.project.Project;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class CodeCandidateRankerTest {
 
 	private CodeSearchService codeSearchService;
+	private ax.clio.memory.CodeMemorySearchService codeMemorySearchService;
 	private CodeCandidateRanker ranker;
 
 	@BeforeEach
 	void setUp() {
 		codeSearchService = mock(CodeSearchService.class);
-		ranker = new CodeCandidateRanker(codeSearchService);
+		codeMemorySearchService = mock(ax.clio.memory.CodeMemorySearchService.class);
+		ranker = new CodeCandidateRanker(codeSearchService, codeMemorySearchService);
 	}
 
 	@Test
@@ -253,6 +264,66 @@ class CodeCandidateRankerTest {
 	@Test
 	void emptyInputsReturnEmpty() {
 		assertThat(ranker.rank(1L, List.of())).isEmpty();
+	}
+
+	@Test
+	void semanticFallbackAugmentsWhenKeywordCandidatesWeak() {
+		// 키워드는 헛발질(빈 결과) → semantic이 후보를 보강한다 (D5/D6 "필요할 때만 호출")
+		when(codeSearchService.search(eq(1L), anyString(), anyInt())).thenReturn(List.of());
+		when(codeMemorySearchService.semanticSearch(eq(1L), eq("리뷰가 삭제되지 않아요"), anyInt()))
+				.thenReturn(List.of(scoredChunk("removeComment", "SERVICE", 42, 1.0)));
+
+		List<RankedCodeCandidate> result = ranker.rank(1L, List.of(
+				new ReportSearchInput("리뷰가 삭제되지 않아요", ReportSearchInputType.RAW_REPORT)));
+
+		assertThat(result).hasSize(1);
+		RankedCodeCandidate c = result.getFirst();
+		assertThat(c.symbolName()).isEqualTo("removeComment");
+		assertThat(c.lineNumber()).isEqualTo(42);
+		// score 1.0 * 90 = 90, CODE_TEXT/KEYWORD multiplier 1.0, no bonus
+		assertThat(c.baseScore()).isEqualTo(CodeCandidateRanker.SEMANTIC_SCORE_SCALE);
+		assertThat(c.adjustedScore()).isEqualTo(CodeCandidateRanker.SEMANTIC_SCORE_SCALE);
+	}
+
+	@Test
+	void noSemanticFallbackWhenEnoughKeywordCandidates() {
+		when(codeSearchService.search(eq(1L), eq("payment"), anyInt())).thenReturn(List.of(
+				symbol("A.java", "A", CodeSymbolType.CLASS, null, CodeSearchMatchType.CLASS_NAME, 100),
+				symbol("B.java", "B", CodeSymbolType.CLASS, null, CodeSearchMatchType.CLASS_NAME, 100),
+				symbol("C.java", "C", CodeSymbolType.CLASS, null, CodeSearchMatchType.CLASS_NAME, 100)));
+
+		ranker.rank(1L, List.of(new ReportSearchInput("payment", ReportSearchInputType.KEYWORD)));
+
+		verify(codeMemorySearchService, never()).semanticSearch(eq(1L), anyString(), anyInt());
+	}
+
+	@Test
+	void semanticFallbackDoesNotOverrideKeywordSymbol() {
+		// 키워드가 2개(< 3)라 fallback은 돌지만, 동일 심볼을 semantic이 덮어쓰지 않는다
+		when(codeSearchService.search(eq(1L), eq("review"), anyInt())).thenReturn(List.of(
+				symbol("ReviewService.java", "removeComment", CodeSymbolType.METHOD, "SERVICE",
+						CodeSearchMatchType.METHOD_NAME, 90),
+				symbol("Other.java", "other", CodeSymbolType.METHOD, "SERVICE",
+						CodeSearchMatchType.METHOD_NAME, 90)));
+		when(codeMemorySearchService.semanticSearch(eq(1L), anyString(), anyInt()))
+				.thenReturn(List.of(scoredChunk("removeComment", "SERVICE", 42, 1.0)));
+
+		List<RankedCodeCandidate> result = ranker.rank(1L, List.of(
+				new ReportSearchInput("review", ReportSearchInputType.RAW_REPORT)));
+
+		RankedCodeCandidate review = result.stream()
+				.filter(c -> c.filePath().equals("ReviewService.java")).findFirst().orElseThrow();
+		// 키워드 점수(90)가 유지되고 semantic 점수로 대체되지 않음(matchType METHOD_NAME 유지)
+		assertThat(review.matchType()).isEqualTo(CodeSearchMatchType.METHOD_NAME);
+	}
+
+	private ScoredCodeChunk scoredChunk(String name, String role, int startLine, double score) {
+		Project project = new Project("demo", "/workspace/demo", "desc");
+		CodeFile file = new CodeFile(project, "ReviewService.java", "ReviewService.java", "JAVA", false, 0L,
+				Instant.now());
+		CodeChunk chunk = new CodeChunk(project, file, "ReviewService.java", name, role,
+				CodeChunkType.METHOD, startLine, startLine + 3, "void " + name + "() {}", null);
+		return new ScoredCodeChunk(chunk, score);
 	}
 
 	private CodeSearchResult symbol(String filePath, String name, CodeSymbolType type,
