@@ -10,5 +10,5 @@ public record RelatedDecisionEntry(
 		Long decisionId,
 		String title,
 		double score
-) {
+) implements java.io.Serializable {
 }

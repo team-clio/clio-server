@@ -18,7 +18,7 @@ public record AnalysisResultDraft(
 		List<SimilarIssueEntry> similarIssues,
 		List<RelatedDecisionEntry> relatedDecisions,
 		List<String> evidenceWarnings
-) {
+) implements java.io.Serializable {
 
 	/**
 	 * LLM이 생성한 리포트 텍스트로 summary·recommendedFix·recommendedTests 3필드만 교체한 새 draft를 만든다

@@ -8,7 +8,7 @@ import java.util.List;
  */
 public record CodeFlow(
 		List<FlowNode> nodes
-) {
+) implements java.io.Serializable {
 
 	/** 흐름을 "A -> B -> C" 형태의 한 줄로 표현한다(className 기준). */
 	public String describe() {

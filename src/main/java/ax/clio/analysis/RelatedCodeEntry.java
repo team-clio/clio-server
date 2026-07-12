@@ -9,5 +9,5 @@ public record RelatedCodeEntry(
 		String snippet,
 		int score,
 		int hitCount
-) {
+) implements java.io.Serializable {
 }

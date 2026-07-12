@@ -7,5 +7,5 @@ public record SimilarIssueEntry(
 		Long reportId,
 		String title,
 		double score
-) {
+) implements java.io.Serializable {
 }
