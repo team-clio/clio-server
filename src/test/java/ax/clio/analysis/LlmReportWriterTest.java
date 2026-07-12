@@ -89,7 +89,7 @@ class LlmReportWriterTest {
 				"rule-based summary",
 				List.of(new RelatedCodeEntry("src/PaymentService.java", "PaymentService", "SERVICE", "EXACT", 42, "…", 90, 3)),
 				List.of(), "rule-based rationale", "rule-based fix", "rule-based tests",
-				List.of(), List.of());
+				List.of(), List.of(), List.of());
 	}
 
 	private LlmConfig config() {

@@ -37,6 +37,6 @@ class AnalysisJobSimilarIssuesTest {
 
 	private AnalysisResultDraft draftWithSimilarIssues(List<SimilarIssueEntry> similarIssues) {
 		return new AnalysisResultDraft(50, 50, 50, "UNKNOWN", "", "", "summary",
-				List.of(), List.of(), "rationale", "fix", "tests", similarIssues, List.of());
+				List.of(), List.of(), "rationale", "fix", "tests", similarIssues, List.of(), List.of());
 	}
 }
