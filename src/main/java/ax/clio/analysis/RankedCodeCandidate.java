@@ -19,5 +19,5 @@ public record RankedCodeCandidate(
 		int adjustedScore,
 		int hitCount,
 		List<ReportSearchInputType> matchedInputTypes
-) {
+) implements java.io.Serializable {
 }

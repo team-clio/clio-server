@@ -5,5 +5,5 @@ public record FlowNode(
 		String className,
 		String role,
 		boolean test
-) {
+) implements java.io.Serializable {
 }

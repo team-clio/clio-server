@@ -9,7 +9,7 @@ public record ReportSearchPreparation(
 		List<String> symptoms,
 		List<String> codeSearchTerms,
 		String confidence
-) {
+) implements java.io.Serializable {
 
 	public static ReportSearchPreparation rawOnly() {
 		return new ReportSearchPreparation(
