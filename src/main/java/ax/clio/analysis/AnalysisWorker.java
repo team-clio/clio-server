@@ -29,11 +29,13 @@ public class AnalysisWorker {
 	private final IssueMemoryService issueMemoryService;
 	private final DecisionMemoryService decisionMemoryService;
 	private final LlmReportWriter llmReportWriter;
+	private final ReportEvidenceVerifier reportEvidenceVerifier;
 
 	public AnalysisWorker(AnalysisJobRepository analysisJobRepository, CodeCandidateRanker codeCandidateRanker,
 			FlowTracer flowTracer, ReportSearchInputBuilder searchInputBuilder, ReportSearchPreparer reportSearchPreparer,
 			LlmConfigService llmConfigService, IssueMemoryService issueMemoryService,
-			DecisionMemoryService decisionMemoryService, LlmReportWriter llmReportWriter) {
+			DecisionMemoryService decisionMemoryService, LlmReportWriter llmReportWriter,
+			ReportEvidenceVerifier reportEvidenceVerifier) {
 		this.analysisJobRepository = analysisJobRepository;
 		this.codeCandidateRanker = codeCandidateRanker;
 		this.flowTracer = flowTracer;
@@ -43,6 +45,7 @@ public class AnalysisWorker {
 		this.issueMemoryService = issueMemoryService;
 		this.decisionMemoryService = decisionMemoryService;
 		this.llmReportWriter = llmReportWriter;
+		this.reportEvidenceVerifier = reportEvidenceVerifier;
 	}
 
 	@Transactional
@@ -94,8 +97,18 @@ public class AnalysisWorker {
 		}
 		LlmConfig config = llmConfigService.getConfig(job.getLlmConfigId());
 		return llmReportWriter.write(report, draft, config, job.getLlmModel())
-				.map(draft::withGeneratedReport)
+				.map(generated -> verifyEvidence(draft.withGeneratedReport(generated), generated))
 				.orElse(draft);
+	}
+
+	/**
+	 * #11: LLM 리포트가 근거(relatedCode·flows)에 없는 파일/클래스를 언급하면 경고를 붙인다(E3=경고만, E4).
+	 * 텍스트는 유지하고 evidenceWarnings만 채운다. rule-based 폴백 경로엔 경고가 없다(빈 리스트).
+	 */
+	private AnalysisResultDraft verifyEvidence(AnalysisResultDraft enriched, GeneratedReport generated) {
+		List<String> warnings = reportEvidenceVerifier.findUnsupportedReferences(
+				generated, enriched.relatedCode(), enriched.flows());
+		return warnings.isEmpty() ? enriched : enriched.withEvidenceWarnings(warnings);
 	}
 
 	private AnalysisResultDraft buildDraft(BugReport report, ReportSearchPreparation preparation,
@@ -172,7 +185,8 @@ public class AnalysisWorker {
 				recommendedFix,
 				recommendedTests,
 				similarIssueEntries,
-				relatedDecisionEntries
+				relatedDecisionEntries,
+				List.of()
 		);
 	}
 

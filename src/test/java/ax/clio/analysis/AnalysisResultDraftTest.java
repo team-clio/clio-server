@@ -20,7 +20,8 @@ class AnalysisResultDraftTest {
 				List.of(new RelatedCodeEntry("A.java", "A", "SERVICE", "EXACT", 1, "s", 90, 2)),
 				List.of(), "rule rationale", "rule fix", "rule tests",
 				List.of(new SimilarIssueEntry(1L, "past", 0.9)),
-				List.of(new RelatedDecisionEntry(2L, "decision", 0.8)));
+				List.of(new RelatedDecisionEntry(2L, "decision", 0.8)),
+				List.of());
 
 		AnalysisResultDraft enriched = base.withGeneratedReport(
 				new GeneratedReport("llm summary", "llm fix", "llm tests"));

@@ -16,7 +16,8 @@ public record AnalysisResultDraft(
 		String recommendedFix,
 		String recommendedTests,
 		List<SimilarIssueEntry> similarIssues,
-		List<RelatedDecisionEntry> relatedDecisions
+		List<RelatedDecisionEntry> relatedDecisions,
+		List<String> evidenceWarnings
 ) {
 
 	/**
@@ -38,7 +39,31 @@ public record AnalysisResultDraft(
 				generated.recommendedFix(),
 				generated.recommendedTests(),
 				similarIssues,
-				relatedDecisions
+				relatedDecisions,
+				evidenceWarnings
+		);
+	}
+
+	/**
+	 * 근거 검증 경고(#11 / 4.4, E4)를 붙인 새 draft를 만든다. 텍스트는 그대로 두고 경고만 부착한다(E3=경고만).
+	 */
+	public AnalysisResultDraft withEvidenceWarnings(List<String> warnings) {
+		return new AnalysisResultDraft(
+				importanceScore,
+				difficultyScore,
+				riskScore,
+				issueType,
+				keywords,
+				domains,
+				summary,
+				relatedCode,
+				flows,
+				rationale,
+				recommendedFix,
+				recommendedTests,
+				similarIssues,
+				relatedDecisions,
+				warnings
 		);
 	}
 }
