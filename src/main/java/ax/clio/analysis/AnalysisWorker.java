@@ -28,11 +28,12 @@ public class AnalysisWorker {
 	private final LlmConfigService llmConfigService;
 	private final IssueMemoryService issueMemoryService;
 	private final DecisionMemoryService decisionMemoryService;
+	private final LlmReportWriter llmReportWriter;
 
 	public AnalysisWorker(AnalysisJobRepository analysisJobRepository, CodeCandidateRanker codeCandidateRanker,
 			FlowTracer flowTracer, ReportSearchInputBuilder searchInputBuilder, ReportSearchPreparer reportSearchPreparer,
 			LlmConfigService llmConfigService, IssueMemoryService issueMemoryService,
-			DecisionMemoryService decisionMemoryService) {
+			DecisionMemoryService decisionMemoryService, LlmReportWriter llmReportWriter) {
 		this.analysisJobRepository = analysisJobRepository;
 		this.codeCandidateRanker = codeCandidateRanker;
 		this.flowTracer = flowTracer;
@@ -41,6 +42,7 @@ public class AnalysisWorker {
 		this.llmConfigService = llmConfigService;
 		this.issueMemoryService = issueMemoryService;
 		this.decisionMemoryService = decisionMemoryService;
+		this.llmReportWriter = llmReportWriter;
 	}
 
 	@Transactional
@@ -61,6 +63,8 @@ public class AnalysisWorker {
 			// #9: 관련 설계 결정 조회(사람이 등록한 결정, 프로젝트 스코프). 충돌은 자동판정 않고 참고로 표시(D7).
 			List<ScoredDecision> relatedDecisions = decisionMemoryService.findRelevant(report, RELATED_DECISION_LIMIT);
 			AnalysisResultDraft draft = buildDraft(report, preparation, candidates, flows, similarIssues, relatedDecisions);
+			// #10: rule-based draft 위에 LLM 리포트(summary·fix·tests)를 덧입힌다(L5). 실패·미설정이면 rule-based 유지(L3).
+			draft = enrichWithLlmReport(report, draft, job);
 
 			job.complete(draft);
 			report.changeStatus(BugReportStatus.COMPLETED);
@@ -78,6 +82,20 @@ public class AnalysisWorker {
 		}
 		LlmConfig config = llmConfigService.getConfig(job.getLlmConfigId());
 		return reportSearchPreparer.prepare(report, config, job.getLlmModel());
+	}
+
+	/**
+	 * #10: llmConfigId가 있으면 LLM 리포트로 3필드(summary·fix·tests)를 교체한다. 실패·미설정 시 rule-based
+	 * draft를 그대로 반환한다(L3 자동 폴백). 점수·근거·검색결과는 건드리지 않는다.
+	 */
+	private AnalysisResultDraft enrichWithLlmReport(BugReport report, AnalysisResultDraft draft, AnalysisJob job) {
+		if (job.getLlmConfigId() == null) {
+			return draft;
+		}
+		LlmConfig config = llmConfigService.getConfig(job.getLlmConfigId());
+		return llmReportWriter.write(report, draft, config, job.getLlmModel())
+				.map(draft::withGeneratedReport)
+				.orElse(draft);
 	}
 
 	private AnalysisResultDraft buildDraft(BugReport report, ReportSearchPreparation preparation,
