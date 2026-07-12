@@ -25,7 +25,8 @@ public record AnalysisJobResponse(
 		List<CodeFlow> flows,
 		String rationale,
 		String recommendedFix,
-		String recommendedTests
+		String recommendedTests,
+		List<SimilarIssueEntry> similarIssues
 ) {
 
 	public static AnalysisJobResponse from(AnalysisJob job) {
@@ -51,7 +52,8 @@ public record AnalysisJobResponse(
 				job.getFlows(),
 				job.getRationale(),
 				job.getRecommendedFix(),
-				job.getRecommendedTests()
+				job.getRecommendedTests(),
+				job.getSimilarIssues()
 		);
 	}
 }

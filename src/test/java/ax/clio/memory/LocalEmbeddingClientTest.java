@@ -19,6 +19,18 @@ class LocalEmbeddingClientTest {
 	}
 
 	@Test
+	void handlesKoreanTokensNotJustAscii() {
+		// 버그 리포트는 한글 → 한글 토큰이 살아야 함(비ASCII 처리)
+		float[] korean = client.embed("결제 취소 오류");
+		assertThat(norm(korean)).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-5));
+
+		float[] query = client.embed("결제 취소");
+		float[] related = client.embed("결제 취소가 안됨");
+		float[] unrelated = client.embed("로그인 세션 만료");
+		assertThat(cosine(query, related)).isGreaterThan(cosine(query, unrelated));
+	}
+
+	@Test
 	void emptyTextYieldsZeroVector() {
 		assertThat(norm(client.embed(""))).isZero();
 		assertThat(norm(client.embed(null))).isZero();

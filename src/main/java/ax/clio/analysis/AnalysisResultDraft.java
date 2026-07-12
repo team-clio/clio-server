@@ -14,6 +14,7 @@ public record AnalysisResultDraft(
 		List<CodeFlow> flows,
 		String rationale,
 		String recommendedFix,
-		String recommendedTests
+		String recommendedTests,
+		List<SimilarIssueEntry> similarIssues
 ) {
 }
