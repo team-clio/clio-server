@@ -15,6 +15,7 @@ public record AnalysisResultDraft(
 		String rationale,
 		String recommendedFix,
 		String recommendedTests,
-		List<SimilarIssueEntry> similarIssues
+		List<SimilarIssueEntry> similarIssues,
+		List<RelatedDecisionEntry> relatedDecisions
 ) {
 }

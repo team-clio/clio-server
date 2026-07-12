@@ -26,7 +26,8 @@ public record AnalysisJobResponse(
 		String rationale,
 		String recommendedFix,
 		String recommendedTests,
-		List<SimilarIssueEntry> similarIssues
+		List<SimilarIssueEntry> similarIssues,
+		List<RelatedDecisionEntry> relatedDecisions
 ) {
 
 	public static AnalysisJobResponse from(AnalysisJob job) {
@@ -53,7 +54,8 @@ public record AnalysisJobResponse(
 				job.getRationale(),
 				job.getRecommendedFix(),
 				job.getRecommendedTests(),
-				job.getSimilarIssues()
+				job.getSimilarIssues(),
+				job.getRelatedDecisions()
 		);
 	}
 }
