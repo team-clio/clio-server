@@ -21,7 +21,13 @@
 - (a) 리치 도메인 객체 그대로.
 - (b) 경량 DTO/직렬화 형태.
 
-**선택: (a) 리치 도메인 객체.** (MemorySaver라 직렬화 강제 아님 — 단 JPA 엔티티는 state에 안 담음.)
+**선택: (a) 리치 도메인 객체 — Serializable 부여.** (JPA 엔티티는 state에 안 담음.)
+
+> **⚠️ 구현 중 정정**: "MemorySaver라 직렬화 강제 아님"은 **틀렸다.** langgraph4j는 saver 종류와 무관하게
+> 체크포인트 시 state를 직렬화한다(기본 `ObjectStreamStateSerializer`=Java 직렬화). 그래서 state 운반 record
+> (ReportSearchPreparation·RankedCodeCandidate·CodeFlow·FlowNode·RelatedCodeEntry·SimilarIssueEntry·
+> RelatedDecisionEntry·AnalysisResultDraft)에 `Serializable`을 부여했고, 엔티티를 감싼 ScoredIssue/ScoredDecision은
+> state에서 빼고 memory 노드에서 plain entry로 매핑했다.
 
 **이유·제약**
 - 노드 사이로 preparation·candidates·flows·similarIssues·relatedDecisions·draft를 전달.
