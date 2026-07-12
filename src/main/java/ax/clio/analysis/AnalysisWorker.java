@@ -5,7 +5,9 @@ import java.util.stream.Collectors;
 
 import ax.clio.llm.LlmConfig;
 import ax.clio.llm.LlmConfigService;
+import ax.clio.memory.DecisionMemoryService;
 import ax.clio.memory.IssueMemoryService;
+import ax.clio.memory.ScoredDecision;
 import ax.clio.memory.ScoredIssue;
 import ax.clio.report.BugReport;
 import ax.clio.report.BugReportStatus;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AnalysisWorker {
 
 	private static final int SIMILAR_ISSUE_LIMIT = 3;
+	private static final int RELATED_DECISION_LIMIT = 3;
 
 	private final AnalysisJobRepository analysisJobRepository;
 	private final CodeCandidateRanker codeCandidateRanker;
@@ -24,10 +27,12 @@ public class AnalysisWorker {
 	private final ReportSearchPreparer reportSearchPreparer;
 	private final LlmConfigService llmConfigService;
 	private final IssueMemoryService issueMemoryService;
+	private final DecisionMemoryService decisionMemoryService;
 
 	public AnalysisWorker(AnalysisJobRepository analysisJobRepository, CodeCandidateRanker codeCandidateRanker,
 			FlowTracer flowTracer, ReportSearchInputBuilder searchInputBuilder, ReportSearchPreparer reportSearchPreparer,
-			LlmConfigService llmConfigService, IssueMemoryService issueMemoryService) {
+			LlmConfigService llmConfigService, IssueMemoryService issueMemoryService,
+			DecisionMemoryService decisionMemoryService) {
 		this.analysisJobRepository = analysisJobRepository;
 		this.codeCandidateRanker = codeCandidateRanker;
 		this.flowTracer = flowTracer;
@@ -35,6 +40,7 @@ public class AnalysisWorker {
 		this.reportSearchPreparer = reportSearchPreparer;
 		this.llmConfigService = llmConfigService;
 		this.issueMemoryService = issueMemoryService;
+		this.decisionMemoryService = decisionMemoryService;
 	}
 
 	@Transactional
@@ -52,7 +58,9 @@ public class AnalysisWorker {
 			List<CodeFlow> flows = flowTracer.trace(report.getProject().getId(), candidatePaths);
 			// #8: 유사 과거 이슈는 이번 리포트를 기억하기 전에 조회(과거분 기준). 자기 자신은 서비스가 제외.
 			List<ScoredIssue> similarIssues = issueMemoryService.findSimilar(report, SIMILAR_ISSUE_LIMIT);
-			AnalysisResultDraft draft = buildDraft(report, preparation, candidates, flows, similarIssues);
+			// #9: 관련 설계 결정 조회(사람이 등록한 결정, 프로젝트 스코프). 충돌은 자동판정 않고 참고로 표시(D7).
+			List<ScoredDecision> relatedDecisions = decisionMemoryService.findRelevant(report, RELATED_DECISION_LIMIT);
+			AnalysisResultDraft draft = buildDraft(report, preparation, candidates, flows, similarIssues, relatedDecisions);
 
 			job.complete(draft);
 			report.changeStatus(BugReportStatus.COMPLETED);
@@ -73,7 +81,8 @@ public class AnalysisWorker {
 	}
 
 	private AnalysisResultDraft buildDraft(BugReport report, ReportSearchPreparation preparation,
-			List<RankedCodeCandidate> candidates, List<CodeFlow> flows, List<ScoredIssue> similarIssues) {
+			List<RankedCodeCandidate> candidates, List<CodeFlow> flows, List<ScoredIssue> similarIssues,
+			List<ScoredDecision> relatedDecisions) {
 		long relatedFileCount = candidates.stream().map(RankedCodeCandidate::filePath).distinct().count();
 		boolean touchesEntity = candidates.stream()
 				.anyMatch(c -> "ENTITY".equals(c.symbolRole()));
@@ -124,6 +133,13 @@ public class AnalysisWorker {
 						scored.score()))
 				.toList();
 
+		List<RelatedDecisionEntry> relatedDecisionEntries = relatedDecisions.stream()
+				.map(scored -> new RelatedDecisionEntry(
+						scored.decision().getId(),
+						scored.decision().getTitle(),
+						scored.score()))
+				.toList();
+
 		return new AnalysisResultDraft(
 				importance,
 				difficulty,
@@ -137,7 +153,8 @@ public class AnalysisWorker {
 				rationale,
 				recommendedFix,
 				recommendedTests,
-				similarIssueEntries
+				similarIssueEntries,
+				relatedDecisionEntries
 		);
 	}
 
