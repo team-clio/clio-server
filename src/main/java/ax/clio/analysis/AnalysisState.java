@@ -20,8 +20,7 @@ public class AnalysisState extends AgentState {
 	public static final String PREPARATION = "preparation";
 	public static final String CANDIDATES = "candidates";
 	public static final String FLOWS = "flows";
-	public static final String SIMILAR_ISSUES = "similarIssues";
-	public static final String RELATED_DECISIONS = "relatedDecisions";
+	public static final String MEMORY = "memory";
 	public static final String DRAFT = "draft";
 
 	/** 단일값 갱신만 쓰므로 스키마는 비운다(키 없으면 기본 덮어쓰기). */
@@ -47,12 +46,8 @@ public class AnalysisState extends AgentState {
 		return this.<List<CodeFlow>>value(FLOWS).orElseGet(List::of);
 	}
 
-	public List<SimilarIssueEntry> similarIssues() {
-		return this.<List<SimilarIssueEntry>>value(SIMILAR_ISSUES).orElseGet(List::of);
-	}
-
-	public List<RelatedDecisionEntry> relatedDecisions() {
-		return this.<List<RelatedDecisionEntry>>value(RELATED_DECISIONS).orElseGet(List::of);
+	public MemoryContext memory() {
+		return this.<MemoryContext>value(MEMORY).orElseGet(() -> new MemoryContext(List.of(), List.of()));
 	}
 
 	public AnalysisResultDraft draft() {

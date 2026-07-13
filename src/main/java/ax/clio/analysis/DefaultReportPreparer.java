@@ -1,0 +1,27 @@
+package ax.clio.analysis;
+
+import ax.clio.llm.LlmConfig;
+import ax.clio.llm.LlmConfigService;
+import org.springframework.stereotype.Component;
+
+/** rule-based/LLM 리포트 구조화 선택을 캡슐화한 {@link ReportPreparer} 구현. */
+@Component
+class DefaultReportPreparer implements ReportPreparer {
+
+	private final ReportSearchPreparer reportSearchPreparer;
+	private final LlmConfigService llmConfigService;
+
+	DefaultReportPreparer(ReportSearchPreparer reportSearchPreparer, LlmConfigService llmConfigService) {
+		this.reportSearchPreparer = reportSearchPreparer;
+		this.llmConfigService = llmConfigService;
+	}
+
+	@Override
+	public ReportSearchPreparation prepare(AnalysisJob job) {
+		if (job.getSearchMode() == ReportSearchInputMode.RAW_ONLY || job.getLlmConfigId() == null) {
+			return ReportSearchPreparation.rawOnly();
+		}
+		LlmConfig config = llmConfigService.getConfig(job.getLlmConfigId());
+		return reportSearchPreparer.prepare(job.getReport(), config, job.getLlmModel());
+	}
+}
