@@ -1,5 +1,7 @@
 package ax.clio.memory;
 
+import ax.clio.analysis.search.CodeCandidateRanker;
+
 import java.util.List;
 
 import org.springframework.stereotype.Service;

@@ -1,5 +1,10 @@
 package ax.clio.analysis;
 
+import ax.clio.analysis.pipeline.MemoryContext;
+import ax.clio.analysis.pipeline.MemoryRetriever;
+import ax.clio.analysis.pipeline.RelatedDecisionEntry;
+import ax.clio.analysis.pipeline.SimilarIssueEntry;
+
 import java.util.List;
 
 import ax.clio.memory.DecisionMemoryService;

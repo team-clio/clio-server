@@ -1,5 +1,7 @@
 package ax.clio.analysis.eval;
 
+import ax.clio.analysis.pipeline.ReportSearchPreparation;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
@@ -7,7 +9,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import ax.clio.analysis.ReportSearchPreparation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

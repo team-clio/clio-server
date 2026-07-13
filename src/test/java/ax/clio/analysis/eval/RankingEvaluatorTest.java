@@ -1,5 +1,9 @@
 package ax.clio.analysis.eval;
 
+import ax.clio.analysis.pipeline.ReportSearchInputMode;
+import ax.clio.analysis.search.CodeCandidateRanker;
+import ax.clio.analysis.search.ReportSearchInputBuilder;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -11,9 +15,6 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Set;
 
-import ax.clio.analysis.CodeCandidateRanker;
-import ax.clio.analysis.ReportSearchInputBuilder;
-import ax.clio.analysis.ReportSearchInputMode;
 import ax.clio.code.CodeSearchMatchType;
 import ax.clio.code.CodeSearchResult;
 import ax.clio.code.CodeSearchService;

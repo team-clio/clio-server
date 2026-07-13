@@ -1,5 +1,11 @@
 package ax.clio.analysis;
 
+import ax.clio.analysis.pipeline.ReportSearchInput;
+import ax.clio.analysis.pipeline.ReportSearchInputMode;
+import ax.clio.analysis.pipeline.ReportSearchInputType;
+import ax.clio.analysis.pipeline.ReportSearchPreparation;
+import ax.clio.analysis.search.ReportSearchInputBuilder;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
