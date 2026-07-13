@@ -2,8 +2,8 @@ package ax.clio.analysis.pipeline;
 
 import java.util.List;
 
-import ax.clio.code.CodeSearchMatchType;
-import ax.clio.code.CodeSymbolType;
+import ax.clio.code.entity.CodeSearchMatchType;
+import ax.clio.code.entity.CodeSymbolType;
 
 public record RankedCodeCandidate(
 		Long fileId,

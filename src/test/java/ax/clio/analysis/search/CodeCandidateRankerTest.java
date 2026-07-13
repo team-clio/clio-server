@@ -1,5 +1,7 @@
 package ax.clio.analysis.search;
 
+import ax.clio.memory.code.CodeMemorySearchService;
+
 import ax.clio.analysis.pipeline.RankedCodeCandidate;
 import ax.clio.analysis.pipeline.ReportSearchInput;
 import ax.clio.analysis.pipeline.ReportSearchInputType;
@@ -17,28 +19,28 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.List;
 
-import ax.clio.code.CodeFile;
-import ax.clio.code.CodeSearchMatchType;
-import ax.clio.code.CodeSearchResult;
-import ax.clio.code.CodeSearchService;
-import ax.clio.code.CodeSymbolType;
-import ax.clio.memory.CodeChunk;
-import ax.clio.memory.CodeChunkType;
-import ax.clio.memory.ScoredCodeChunk;
-import ax.clio.project.Project;
+import ax.clio.code.entity.CodeFile;
+import ax.clio.code.entity.CodeSearchMatchType;
+import ax.clio.code.entity.CodeSearchResult;
+import ax.clio.code.service.CodeSearchService;
+import ax.clio.code.entity.CodeSymbolType;
+import ax.clio.memory.code.CodeChunk;
+import ax.clio.memory.code.CodeChunkType;
+import ax.clio.memory.code.ScoredCodeChunk;
+import ax.clio.project.entity.Project;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class CodeCandidateRankerTest {
 
 	private CodeSearchService codeSearchService;
-	private ax.clio.memory.CodeMemorySearchService codeMemorySearchService;
+	private ax.clio.memory.code.CodeMemorySearchService codeMemorySearchService;
 	private CodeCandidateRanker ranker;
 
 	@BeforeEach
 	void setUp() {
 		codeSearchService = mock(CodeSearchService.class);
-		codeMemorySearchService = mock(ax.clio.memory.CodeMemorySearchService.class);
+		codeMemorySearchService = mock(ax.clio.memory.code.CodeMemorySearchService.class);
 		ranker = new CodeCandidateRanker(codeSearchService, codeMemorySearchService);
 	}
 

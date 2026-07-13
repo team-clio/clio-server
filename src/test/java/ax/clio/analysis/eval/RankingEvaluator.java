@@ -11,8 +11,8 @@ import ax.clio.analysis.search.ReportSearchInputBuilder;
 
 import java.util.List;
 
-import ax.clio.project.Project;
-import ax.clio.report.BugReport;
+import ax.clio.project.entity.Project;
+import ax.clio.report.entity.BugReport;
 
 /**
  * Drives the real search + rank pipeline against mined {@link EvalCase}s and scores the

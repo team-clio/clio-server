@@ -2,8 +2,8 @@ package ax.clio.analysis.prepare;
 
 import ax.clio.analysis.pipeline.ReportSearchPreparation;
 
-import ax.clio.llm.LlmConfig;
-import ax.clio.report.BugReport;
+import ax.clio.llm.entity.LlmConfig;
+import ax.clio.report.entity.BugReport;
 
 public interface ReportSearchPreparer {
 

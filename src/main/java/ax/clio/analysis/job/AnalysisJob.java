@@ -10,7 +10,7 @@ import ax.clio.analysis.pipeline.SimilarIssueEntry;
 import java.time.Instant;
 import java.util.List;
 
-import ax.clio.report.BugReport;
+import ax.clio.report.entity.BugReport;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;

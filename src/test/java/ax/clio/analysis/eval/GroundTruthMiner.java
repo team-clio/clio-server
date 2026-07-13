@@ -1,5 +1,7 @@
 package ax.clio.analysis.eval;
 
+import ax.clio.code.entity.CodeFile;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;

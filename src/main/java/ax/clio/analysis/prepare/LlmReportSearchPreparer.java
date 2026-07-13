@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Set;
 
 import ax.clio.common.BusinessException;
-import ax.clio.llm.LlmClient;
-import ax.clio.llm.LlmConfig;
-import ax.clio.report.BugReport;
+import ax.clio.llm.client.LlmClient;
+import ax.clio.llm.entity.LlmConfig;
+import ax.clio.report.entity.BugReport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;

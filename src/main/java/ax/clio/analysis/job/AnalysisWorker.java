@@ -3,8 +3,8 @@ package ax.clio.analysis.job;
 import ax.clio.analysis.pipeline.AnalysisGraph;
 import ax.clio.analysis.pipeline.AnalysisResultDraft;
 
-import ax.clio.memory.IssueMemoryService;
-import ax.clio.report.BugReportStatus;
+import ax.clio.memory.issue.IssueMemoryService;
+import ax.clio.report.entity.BugReportStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 

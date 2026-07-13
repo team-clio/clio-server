@@ -24,8 +24,8 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 
-import ax.clio.project.Project;
-import ax.clio.report.BugReport;
+import ax.clio.project.entity.Project;
+import ax.clio.report.entity.BugReport;
 import org.junit.jupiter.api.Test;
 
 /**

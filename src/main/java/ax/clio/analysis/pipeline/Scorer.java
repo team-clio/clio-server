@@ -2,7 +2,7 @@ package ax.clio.analysis.pipeline;
 
 import java.util.List;
 
-import ax.clio.report.BugReport;
+import ax.clio.report.entity.BugReport;
 
 /**
  * [파이프라인 포트] 점수화 단계. rule-based 점수·근거를 담은 draft를 생산한다.

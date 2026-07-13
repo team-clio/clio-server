@@ -15,7 +15,7 @@ import ax.clio.analysis.pipeline.SimilarIssueEntry;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import ax.clio.report.BugReport;
+import ax.clio.report.entity.BugReport;
 import org.springframework.stereotype.Component;
 
 /**

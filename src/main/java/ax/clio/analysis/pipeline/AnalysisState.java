@@ -1,5 +1,10 @@
 package ax.clio.analysis.pipeline;
 
+import ax.clio.memory.decision.ScoredDecision;
+import ax.clio.memory.issue.ScoredIssue;
+import ax.clio.project.entity.Project;
+import ax.clio.report.entity.BugReport;
+
 import java.util.List;
 import java.util.Map;
 

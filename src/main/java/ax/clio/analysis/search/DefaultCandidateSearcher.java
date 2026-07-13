@@ -8,7 +8,7 @@ import ax.clio.analysis.pipeline.ReportSearchPreparation;
 
 import java.util.List;
 
-import ax.clio.report.BugReport;
+import ax.clio.report.entity.BugReport;
 import org.springframework.stereotype.Component;
 
 /** 검색 입력 구성 + 랭킹을 결합한 {@link CandidateSearcher} 구현. */

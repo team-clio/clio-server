@@ -8,9 +8,9 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-import ax.clio.code.CodeFile;
-import ax.clio.code.CodeSymbol;
-import ax.clio.code.CodeSymbolType;
+import ax.clio.code.entity.CodeFile;
+import ax.clio.code.entity.CodeSymbol;
+import ax.clio.code.entity.CodeSymbolType;
 import org.junit.jupiter.api.Test;
 
 class CodeDependencyGraphTest {

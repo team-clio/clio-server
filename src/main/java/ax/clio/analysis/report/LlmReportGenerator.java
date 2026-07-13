@@ -7,8 +7,8 @@ import ax.clio.analysis.pipeline.ReportGenerator;
 
 import java.util.List;
 
-import ax.clio.llm.LlmConfig;
-import ax.clio.llm.LlmConfigService;
+import ax.clio.llm.entity.LlmConfig;
+import ax.clio.llm.service.LlmConfigService;
 import org.springframework.stereotype.Component;
 
 /** #10 LLM 리포트 보강 + #11 근거 검증을 결합한 {@link ReportGenerator} 구현. 실패·미설정 시 입력 draft 유지. */

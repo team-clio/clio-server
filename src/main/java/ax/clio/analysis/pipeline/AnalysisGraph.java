@@ -9,7 +9,7 @@ import static org.bsc.langgraph4j.action.AsyncNodeAction.node_async;
 
 import java.util.Map;
 
-import ax.clio.report.BugReport;
+import ax.clio.report.entity.BugReport;
 import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.RunnableConfig;

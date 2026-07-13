@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 import ax.clio.common.BusinessException;
-import ax.clio.llm.LlmConfig;
-import ax.clio.llm.LlmConfigService;
-import ax.clio.report.BugReport;
-import ax.clio.report.BugReportService;
+import ax.clio.llm.entity.LlmConfig;
+import ax.clio.llm.service.LlmConfigService;
+import ax.clio.report.entity.BugReport;
+import ax.clio.report.service.BugReportService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

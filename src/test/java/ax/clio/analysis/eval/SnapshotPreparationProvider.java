@@ -7,7 +7,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import ax.clio.report.BugReport;
+import ax.clio.report.entity.BugReport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**

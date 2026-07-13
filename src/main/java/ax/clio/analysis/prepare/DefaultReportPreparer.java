@@ -5,8 +5,8 @@ import ax.clio.analysis.pipeline.ReportPreparer;
 import ax.clio.analysis.pipeline.ReportSearchInputMode;
 import ax.clio.analysis.pipeline.ReportSearchPreparation;
 
-import ax.clio.llm.LlmConfig;
-import ax.clio.llm.LlmConfigService;
+import ax.clio.llm.entity.LlmConfig;
+import ax.clio.llm.service.LlmConfigService;
 import org.springframework.stereotype.Component;
 
 /** rule-based/LLM 리포트 구조화 선택을 캡슐화한 {@link ReportPreparer} 구현. */

@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ax.clio.code.CodeSymbol;
-import ax.clio.code.CodeSymbolType;
+import ax.clio.code.entity.CodeSymbol;
+import ax.clio.code.entity.CodeSymbolType;
 
 /**
  * 프로젝트 심볼로부터 클래스 단위 의존 그래프를 구성한다(순수 로직, 스프링 의존 없음).

@@ -12,14 +12,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ax.clio.code.CodeSearchMatchType;
-import ax.clio.code.CodeSearchResult;
-import ax.clio.code.CodeSearchService;
-import ax.clio.code.CodeSymbolType;
-import ax.clio.memory.CodeChunk;
-import ax.clio.memory.CodeChunkType;
-import ax.clio.memory.CodeMemorySearchService;
-import ax.clio.memory.ScoredCodeChunk;
+import ax.clio.code.entity.CodeSearchMatchType;
+import ax.clio.code.entity.CodeSearchResult;
+import ax.clio.code.service.CodeSearchService;
+import ax.clio.code.entity.CodeSymbolType;
+import ax.clio.memory.code.CodeChunk;
+import ax.clio.memory.code.CodeChunkType;
+import ax.clio.memory.code.CodeMemorySearchService;
+import ax.clio.memory.code.ScoredCodeChunk;
 import org.springframework.stereotype.Component;
 
 @Component

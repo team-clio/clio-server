@@ -13,11 +13,11 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 
-import ax.clio.llm.LlmClient;
-import ax.clio.llm.LlmConfig;
-import ax.clio.llm.LlmProvider;
-import ax.clio.project.Project;
-import ax.clio.report.BugReport;
+import ax.clio.llm.client.LlmClient;
+import ax.clio.llm.entity.LlmConfig;
+import ax.clio.llm.entity.LlmProvider;
+import ax.clio.project.entity.Project;
+import ax.clio.report.entity.BugReport;
 import org.junit.jupiter.api.Test;
 
 /**

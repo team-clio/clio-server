@@ -7,9 +7,9 @@ import ax.clio.analysis.pipeline.SimilarIssueEntry;
 
 import java.util.List;
 
-import ax.clio.memory.DecisionMemoryService;
-import ax.clio.memory.IssueMemoryService;
-import ax.clio.report.BugReport;
+import ax.clio.memory.decision.DecisionMemoryService;
+import ax.clio.memory.issue.IssueMemoryService;
+import ax.clio.report.entity.BugReport;
 import org.springframework.stereotype.Component;
 
 /** #8 유사 이슈 + #9 관련 결정 조회를 감싸 entry로 매핑하는 {@link MemoryRetriever} 구현. */

@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ax.clio.code.CodeSymbol;
-import ax.clio.code.CodeSymbolRepository;
+import ax.clio.code.entity.CodeSymbol;
+import ax.clio.code.repository.CodeSymbolRepository;
 import org.springframework.stereotype.Component;
 
 /**

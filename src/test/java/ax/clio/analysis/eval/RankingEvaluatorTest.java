@@ -1,5 +1,7 @@
 package ax.clio.analysis.eval;
 
+import ax.clio.memory.code.CodeMemorySearchService;
+
 import ax.clio.analysis.pipeline.ReportSearchInputMode;
 import ax.clio.analysis.search.CodeCandidateRanker;
 import ax.clio.analysis.search.ReportSearchInputBuilder;
@@ -15,10 +17,10 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Set;
 
-import ax.clio.code.CodeSearchMatchType;
-import ax.clio.code.CodeSearchResult;
-import ax.clio.code.CodeSearchService;
-import ax.clio.code.CodeSymbolType;
+import ax.clio.code.entity.CodeSearchMatchType;
+import ax.clio.code.entity.CodeSearchResult;
+import ax.clio.code.service.CodeSearchService;
+import ax.clio.code.entity.CodeSymbolType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +35,7 @@ class RankingEvaluatorTest {
 		// Real builder + ranker so the test exercises the actual pipeline wiring.
 		evaluator = new RankingEvaluator(
 				new ReportSearchInputBuilder(),
-				new CodeCandidateRanker(codeSearchService, mock(ax.clio.memory.CodeMemorySearchService.class)),
+				new CodeCandidateRanker(codeSearchService, mock(ax.clio.memory.code.CodeMemorySearchService.class)),
 				RankingEvaluator.PreparationProvider.rawOnly());
 	}
 

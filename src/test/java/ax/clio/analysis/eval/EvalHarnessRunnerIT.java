@@ -9,10 +9,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import ax.clio.llm.LlmConfig;
-import ax.clio.llm.LlmConfigService;
-import ax.clio.project.Project;
-import ax.clio.project.ProjectService;
+import ax.clio.llm.entity.LlmConfig;
+import ax.clio.llm.service.LlmConfigService;
+import ax.clio.project.entity.Project;
+import ax.clio.project.service.ProjectService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;

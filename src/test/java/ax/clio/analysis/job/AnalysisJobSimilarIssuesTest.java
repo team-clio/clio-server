@@ -9,8 +9,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
-import ax.clio.project.Project;
-import ax.clio.report.BugReport;
+import ax.clio.project.entity.Project;
+import ax.clio.report.entity.BugReport;
 import org.junit.jupiter.api.Test;
 
 class AnalysisJobSimilarIssuesTest {

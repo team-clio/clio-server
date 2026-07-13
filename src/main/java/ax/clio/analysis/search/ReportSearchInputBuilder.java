@@ -9,7 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import ax.clio.report.BugReport;
+import ax.clio.report.entity.BugReport;
 import org.springframework.stereotype.Component;
 
 @Component
