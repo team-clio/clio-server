@@ -1,5 +1,8 @@
 package ax.clio.analysis.eval;
 
+import ax.clio.code.entity.CodeFile;
+import ax.clio.project.entity.Project;
+
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.Set;

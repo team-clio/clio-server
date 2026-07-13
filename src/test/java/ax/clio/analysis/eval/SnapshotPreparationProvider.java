@@ -1,12 +1,13 @@
 package ax.clio.analysis.eval;
 
+import ax.clio.analysis.pipeline.ReportSearchPreparation;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import ax.clio.analysis.ReportSearchPreparation;
-import ax.clio.report.BugReport;
+import ax.clio.report.entity.BugReport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**

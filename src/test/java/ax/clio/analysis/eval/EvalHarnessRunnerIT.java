@@ -1,17 +1,18 @@
 package ax.clio.analysis.eval;
 
+import ax.clio.analysis.pipeline.ReportSearchInputMode;
+import ax.clio.analysis.prepare.LlmReportSearchPreparer;
+import ax.clio.analysis.search.CodeCandidateRanker;
+import ax.clio.analysis.search.ReportSearchInputBuilder;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import ax.clio.analysis.CodeCandidateRanker;
-import ax.clio.analysis.LlmReportSearchPreparer;
-import ax.clio.analysis.ReportSearchInputBuilder;
-import ax.clio.analysis.ReportSearchInputMode;
-import ax.clio.llm.LlmConfig;
-import ax.clio.llm.LlmConfigService;
-import ax.clio.project.Project;
-import ax.clio.project.ProjectService;
+import ax.clio.llm.entity.LlmConfig;
+import ax.clio.llm.service.LlmConfigService;
+import ax.clio.project.entity.Project;
+import ax.clio.project.service.ProjectService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;

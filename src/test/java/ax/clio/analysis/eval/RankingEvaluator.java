@@ -1,15 +1,18 @@
 package ax.clio.analysis.eval;
 
+import ax.clio.analysis.job.AnalysisWorker;
+import ax.clio.analysis.pipeline.RankedCodeCandidate;
+import ax.clio.analysis.pipeline.ReportSearchInput;
+import ax.clio.analysis.pipeline.ReportSearchInputMode;
+import ax.clio.analysis.pipeline.ReportSearchPreparation;
+import ax.clio.analysis.prepare.LlmReportSearchPreparer;
+import ax.clio.analysis.search.CodeCandidateRanker;
+import ax.clio.analysis.search.ReportSearchInputBuilder;
+
 import java.util.List;
 
-import ax.clio.analysis.CodeCandidateRanker;
-import ax.clio.analysis.RankedCodeCandidate;
-import ax.clio.analysis.ReportSearchInput;
-import ax.clio.analysis.ReportSearchInputBuilder;
-import ax.clio.analysis.ReportSearchInputMode;
-import ax.clio.analysis.ReportSearchPreparation;
-import ax.clio.project.Project;
-import ax.clio.report.BugReport;
+import ax.clio.project.entity.Project;
+import ax.clio.report.entity.BugReport;
 
 /**
  * Drives the real search + rank pipeline against mined {@link EvalCase}s and scores the
