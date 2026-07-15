@@ -1,4 +1,4 @@
-package ax.clio.memory.decision;
+package ax.clio.memory.decision.entity;
 
 import java.time.Instant;
 

@@ -1,4 +1,4 @@
-package ax.clio.memory.decision;
+package ax.clio.memory.decision.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

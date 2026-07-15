@@ -7,7 +7,7 @@ import ax.clio.analysis.pipeline.contract.SimilarIssueEntry;
 
 import java.util.List;
 
-import ax.clio.memory.decision.DecisionMemoryService;
+import ax.clio.memory.decision.service.DecisionMemoryService;
 import ax.clio.memory.issue.IssueMemoryService;
 import ax.clio.report.entity.BugReport;
 import org.springframework.stereotype.Component;

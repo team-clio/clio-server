@@ -1,4 +1,6 @@
-package ax.clio.memory.decision;
+package ax.clio.memory.decision.dto;
+
+import ax.clio.memory.decision.entity.DecisionMemory;
 
 /**
  * 유사도 점수가 붙은 결정 메모. score는 코사인 유사도(높을수록 가까움).

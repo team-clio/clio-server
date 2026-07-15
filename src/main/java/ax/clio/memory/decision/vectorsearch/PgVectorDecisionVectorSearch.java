@@ -1,4 +1,8 @@
-package ax.clio.memory.decision;
+package ax.clio.memory.decision.vectorsearch;
+
+import ax.clio.memory.decision.dto.ScoredDecision;
+import ax.clio.memory.decision.entity.DecisionMemory;
+import ax.clio.memory.decision.repository.DecisionMemoryRepository;
 
 import ax.clio.memory.issue.PgVectorIssueVectorSearch;
 

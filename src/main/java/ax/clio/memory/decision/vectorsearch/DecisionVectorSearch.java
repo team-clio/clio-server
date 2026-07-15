@@ -1,4 +1,6 @@
-package ax.clio.memory.decision;
+package ax.clio.memory.decision.vectorsearch;
+
+import ax.clio.memory.decision.dto.ScoredDecision;
 
 import ax.clio.memory.embedding.EmbeddingClient;
 import ax.clio.memory.issue.IssueVectorSearch;
