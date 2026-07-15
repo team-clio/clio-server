@@ -1,4 +1,4 @@
-package ax.clio.analysis;
+package ax.clio.analysis.memory;
 
 import ax.clio.analysis.pipeline.contract.MemoryContext;
 import ax.clio.analysis.pipeline.port.MemoryRetriever;
