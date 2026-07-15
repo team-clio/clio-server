@@ -1,6 +1,6 @@
 package ax.clio.analysis.eval;
 
-import ax.clio.analysis.pipeline.ReportSearchPreparation;
+import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

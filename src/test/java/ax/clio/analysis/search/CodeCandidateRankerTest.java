@@ -2,9 +2,9 @@ package ax.clio.analysis.search;
 
 import ax.clio.memory.code.CodeMemorySearchService;
 
-import ax.clio.analysis.pipeline.RankedCodeCandidate;
-import ax.clio.analysis.pipeline.ReportSearchInput;
-import ax.clio.analysis.pipeline.ReportSearchInputType;
+import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
+import ax.clio.analysis.pipeline.contract.ReportSearchInput;
+import ax.clio.analysis.pipeline.contract.ReportSearchInputType;
 import ax.clio.analysis.search.CodeCandidateRanker;
 
 import static org.assertj.core.api.Assertions.assertThat;

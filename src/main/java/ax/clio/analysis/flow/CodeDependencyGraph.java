@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ax.clio.analysis.pipeline.contract.FlowNode;
 import ax.clio.code.entity.CodeSymbol;
 import ax.clio.code.entity.CodeSymbolType;
 
@@ -20,9 +21,6 @@ import ax.clio.code.entity.CodeSymbolType;
  * import는 클래스 단위이므로 흐름은 "레이어" 수준이다(메서드 콜그래프 아님).
  */
 public class CodeDependencyGraph {
-
-	/** role → 레이어 순번. 낮을수록 상류. 알 수 없으면 맨 뒤. */
-	public static final int UNKNOWN_LAYER = Integer.MAX_VALUE;
 
 	private final Map<String, Node> nodesByFqn = new LinkedHashMap<>();
 	private final Map<String, Node> nodesByFilePath = new HashMap<>();
@@ -95,19 +93,6 @@ public class CodeDependencyGraph {
 		return Collections.unmodifiableSet(dependents.getOrDefault(fqn, Set.of()));
 	}
 
-	public static int layerOf(String role) {
-		if (role == null) {
-			return UNKNOWN_LAYER;
-		}
-		return switch (role) {
-			case "CONTROLLER" -> 0;
-			case "SERVICE" -> 1;
-			case "REPOSITORY" -> 2;
-			case "ENTITY" -> 3;
-			default -> UNKNOWN_LAYER;
-		};
-	}
-
 	private static boolean isClassLevel(CodeSymbolType type) {
 		return type == CodeSymbolType.CLASS
 				|| type == CodeSymbolType.INTERFACE
@@ -163,7 +148,7 @@ public class CodeDependencyGraph {
 			Set<String> imports
 	) {
 		public int layer() {
-			return layerOf(role);
+			return FlowNode.layerOf(role);
 		}
 	}
 

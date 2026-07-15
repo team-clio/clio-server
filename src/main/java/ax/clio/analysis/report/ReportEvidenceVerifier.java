@@ -1,9 +1,9 @@
 package ax.clio.analysis.report;
 
-import ax.clio.analysis.pipeline.CodeFlow;
-import ax.clio.analysis.pipeline.FlowNode;
-import ax.clio.analysis.pipeline.GeneratedReport;
-import ax.clio.analysis.pipeline.RelatedCodeEntry;
+import ax.clio.analysis.pipeline.contract.CodeFlow;
+import ax.clio.analysis.pipeline.contract.FlowNode;
+import ax.clio.analysis.pipeline.contract.GeneratedReport;
+import ax.clio.analysis.pipeline.contract.RelatedCodeEntry;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

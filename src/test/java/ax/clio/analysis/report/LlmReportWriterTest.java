@@ -1,8 +1,8 @@
 package ax.clio.analysis.report;
 
-import ax.clio.analysis.pipeline.AnalysisResultDraft;
-import ax.clio.analysis.pipeline.GeneratedReport;
-import ax.clio.analysis.pipeline.RelatedCodeEntry;
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
+import ax.clio.analysis.pipeline.contract.GeneratedReport;
+import ax.clio.analysis.pipeline.contract.RelatedCodeEntry;
 import ax.clio.analysis.report.LlmReportWriter;
 
 import static org.assertj.core.api.Assertions.assertThat;

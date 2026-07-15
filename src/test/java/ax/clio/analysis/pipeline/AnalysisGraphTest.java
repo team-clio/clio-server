@@ -1,19 +1,19 @@
 package ax.clio.analysis.pipeline;
 
-import ax.clio.analysis.job.AnalysisJob;
-import ax.clio.analysis.job.AnalysisJobRepository;
+import ax.clio.analysis.job.entity.AnalysisJob;
+import ax.clio.analysis.job.repository.AnalysisJobRepository;
 import ax.clio.analysis.pipeline.AnalysisGraph;
-import ax.clio.analysis.pipeline.AnalysisResultDraft;
-import ax.clio.analysis.pipeline.CandidateSearcher;
-import ax.clio.analysis.pipeline.FlowAnalyzer;
-import ax.clio.analysis.pipeline.MemoryContext;
-import ax.clio.analysis.pipeline.MemoryRetriever;
-import ax.clio.analysis.pipeline.RankedCodeCandidate;
-import ax.clio.analysis.pipeline.ReportGenerator;
-import ax.clio.analysis.pipeline.ReportPreparer;
-import ax.clio.analysis.pipeline.ReportSearchInputMode;
-import ax.clio.analysis.pipeline.ReportSearchPreparation;
-import ax.clio.analysis.pipeline.Scorer;
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
+import ax.clio.analysis.pipeline.port.CandidateSearcher;
+import ax.clio.analysis.pipeline.port.FlowAnalyzer;
+import ax.clio.analysis.pipeline.contract.MemoryContext;
+import ax.clio.analysis.pipeline.port.MemoryRetriever;
+import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
+import ax.clio.analysis.pipeline.port.ReportGenerator;
+import ax.clio.analysis.pipeline.port.ReportPreparer;
+import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
+import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;
+import ax.clio.analysis.pipeline.port.Scorer;
 import ax.clio.analysis.scoring.RuleBasedScorer;
 
 import static org.assertj.core.api.Assertions.assertThat;

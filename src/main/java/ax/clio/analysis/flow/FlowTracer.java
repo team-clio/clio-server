@@ -1,7 +1,7 @@
 package ax.clio.analysis.flow;
 
-import ax.clio.analysis.pipeline.CodeFlow;
-import ax.clio.analysis.pipeline.FlowNode;
+import ax.clio.analysis.pipeline.contract.CodeFlow;
+import ax.clio.analysis.pipeline.contract.FlowNode;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

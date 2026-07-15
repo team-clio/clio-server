@@ -1,0 +1,72 @@
+package ax.clio.analysis.job.dto;
+
+import ax.clio.analysis.job.entity.AnalysisJob;
+import ax.clio.analysis.job.entity.AnalysisJobStatus;
+
+import ax.clio.analysis.pipeline.contract.CodeFlow;
+import ax.clio.analysis.pipeline.contract.RelatedCodeEntry;
+import ax.clio.analysis.pipeline.contract.RelatedDecisionEntry;
+import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
+import ax.clio.analysis.pipeline.contract.SimilarIssueEntry;
+
+import java.time.Instant;
+import java.util.List;
+
+public record AnalysisJobResponse(
+		Long id,
+		Long reportId,
+		Long llmConfigId,
+		String llmModel,
+		ReportSearchInputMode searchMode,
+		AnalysisJobStatus status,
+		Instant createdAt,
+		Instant startedAt,
+		Instant completedAt,
+		String failureReason,
+		Integer importanceScore,
+		Integer difficultyScore,
+		Integer riskScore,
+		String issueType,
+		String keywords,
+		String domains,
+		String summary,
+		List<RelatedCodeEntry> relatedCode,
+		List<CodeFlow> flows,
+		String rationale,
+		String recommendedFix,
+		String recommendedTests,
+		List<SimilarIssueEntry> similarIssues,
+		List<RelatedDecisionEntry> relatedDecisions,
+		List<String> evidenceWarnings
+) {
+
+	public static AnalysisJobResponse from(AnalysisJob job) {
+		return new AnalysisJobResponse(
+				job.getId(),
+				job.getReport().getId(),
+				job.getLlmConfigId(),
+				job.getLlmModel(),
+				job.getSearchMode(),
+				job.getStatus(),
+				job.getCreatedAt(),
+				job.getStartedAt(),
+				job.getCompletedAt(),
+				job.getFailureReason(),
+				job.getImportanceScore(),
+				job.getDifficultyScore(),
+				job.getRiskScore(),
+				job.getIssueType(),
+				job.getKeywords(),
+				job.getDomains(),
+				job.getSummary(),
+				job.getRelatedCodeEntries(),
+				job.getFlows(),
+				job.getRationale(),
+				job.getRecommendedFix(),
+				job.getRecommendedTests(),
+				job.getSimilarIssues(),
+				job.getRelatedDecisions(),
+				job.getEvidenceWarnings()
+		);
+	}
+}

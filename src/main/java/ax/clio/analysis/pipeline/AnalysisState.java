@@ -1,6 +1,12 @@
 package ax.clio.analysis.pipeline;
 
-import ax.clio.memory.decision.ScoredDecision;
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
+import ax.clio.analysis.pipeline.contract.CodeFlow;
+import ax.clio.analysis.pipeline.contract.MemoryContext;
+import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
+import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;
+
+import ax.clio.memory.decision.dto.ScoredDecision;
 import ax.clio.memory.issue.ScoredIssue;
 import ax.clio.project.entity.Project;
 import ax.clio.report.entity.BugReport;
