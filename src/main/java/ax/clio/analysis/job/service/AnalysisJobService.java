@@ -1,4 +1,9 @@
-package ax.clio.analysis.job;
+package ax.clio.analysis.job.service;
+
+import ax.clio.analysis.job.dto.AnalysisJobCreateRequest;
+import ax.clio.analysis.job.dto.AnalysisJobResponse;
+import ax.clio.analysis.job.entity.AnalysisJob;
+import ax.clio.analysis.job.repository.AnalysisJobRepository;
 
 import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
 

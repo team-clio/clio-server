@@ -1,4 +1,4 @@
-package ax.clio.analysis.job;
+package ax.clio.analysis.job.entity;
 
 public enum AnalysisJobStatus {
 	PENDING,

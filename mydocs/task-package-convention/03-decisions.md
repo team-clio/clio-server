@@ -51,6 +51,17 @@ scoring·flow 도 함께 쓴다. 경계에 걸친 계약을 억지로 한 단계
 **남는 것**: 이번 작업 후에도 `pipeline ↔ job` 순환은 그대로다. `task-pipeline-ports/04-result.md` 의
 "한계 1번"을 **정확한 원인(포트 시그니처의 엔티티 유출)** 으로 갱신해 후속 태스크의 출발점으로 남긴다.
 
+## P5. `memory/decision` 의 vectorsearch 3종 배치
+**선택: `vectorsearch/` 하위 패키지.**
+**이유**: `DecisionVectorSearch`(포트) + `InMemory`/`PgVector`(어댑터)는 레이어(controller/service/…)가
+아니라 **인프라 어댑터**로 성격이 다르다. 직전 작업 P5 가 "필요한 도메인에만 `config`·`client`·`vectorsearch`
+등 성격 반영"을 이미 허용했다. `service/` 에 넣으면 서비스가 4개로 섞여 성격이 흐려지고, `repository/` 는
+`InMemory` 구현이 함께 있어 어색하다.
+
+## P6. `analysis/job` 의 `AnalysisWorker`·`AnalysisTaskExecutorConfig` 배치
+**선택: `AnalysisWorker` → `service/`, `AnalysisTaskExecutorConfig` → `config/`.**
+**이유**: worker 는 비동기 실행 서비스이고, `config/` 는 `llm/config` 선례가 이미 있어 일관된다.
+
 ## P8. 커밋 분할
 **선택: S1~S7 단계별 7커밋.**
 **이유**: PR 커밋 목록만으로 작업 전개가 읽혀야 한다는 워크플로우 규칙에 부합하고, **이동 커밋과 로직

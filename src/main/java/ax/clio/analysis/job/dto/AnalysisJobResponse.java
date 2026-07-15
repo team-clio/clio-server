@@ -1,4 +1,7 @@
-package ax.clio.analysis.job;
+package ax.clio.analysis.job.dto;
+
+import ax.clio.analysis.job.entity.AnalysisJob;
+import ax.clio.analysis.job.entity.AnalysisJobStatus;
 
 import ax.clio.analysis.pipeline.contract.CodeFlow;
 import ax.clio.analysis.pipeline.contract.RelatedCodeEntry;

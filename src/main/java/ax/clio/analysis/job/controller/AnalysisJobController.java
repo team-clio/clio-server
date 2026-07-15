@@ -1,4 +1,8 @@
-package ax.clio.analysis.job;
+package ax.clio.analysis.job.controller;
+
+import ax.clio.analysis.job.dto.AnalysisJobCreateRequest;
+import ax.clio.analysis.job.dto.AnalysisJobResponse;
+import ax.clio.analysis.job.service.AnalysisJobService;
 
 import java.util.List;
 

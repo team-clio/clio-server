@@ -1,6 +1,6 @@
 package ax.clio.analysis.prepare;
 
-import ax.clio.analysis.job.AnalysisJob;
+import ax.clio.analysis.job.entity.AnalysisJob;
 import ax.clio.analysis.pipeline.port.ReportPreparer;
 import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
 import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;

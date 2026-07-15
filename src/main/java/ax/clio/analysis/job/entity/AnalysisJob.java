@@ -1,4 +1,4 @@
-package ax.clio.analysis.job;
+package ax.clio.analysis.job.entity;
 
 import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
 import ax.clio.analysis.pipeline.contract.CodeFlow;

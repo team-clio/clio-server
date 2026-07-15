@@ -1,6 +1,6 @@
 package ax.clio.analysis.job;
 
-import ax.clio.analysis.job.AnalysisJob;
+import ax.clio.analysis.job.entity.AnalysisJob;
 import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
 import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
 import ax.clio.analysis.pipeline.contract.SimilarIssueEntry;

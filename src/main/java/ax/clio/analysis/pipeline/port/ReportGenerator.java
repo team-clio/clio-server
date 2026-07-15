@@ -2,7 +2,7 @@ package ax.clio.analysis.pipeline.port;
 
 import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
 
-import ax.clio.analysis.job.AnalysisJob;
+import ax.clio.analysis.job.entity.AnalysisJob;
 
 /**
  * [파이프라인 포트] 분석 리포트 생성 단계(#10 LLM 리포트 + #11 근거 검증). llmConfigId 없거나 실패 시

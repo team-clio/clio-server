@@ -1,6 +1,6 @@
 package ax.clio.analysis.eval;
 
-import ax.clio.analysis.job.AnalysisWorker;
+import ax.clio.analysis.job.service.AnalysisWorker;
 import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
 import ax.clio.analysis.pipeline.contract.ReportSearchInput;
 import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;

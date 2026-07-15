@@ -1,4 +1,4 @@
-package ax.clio.analysis.job;
+package ax.clio.analysis.job.config;
 
 import java.util.concurrent.Executor;
 

@@ -1,4 +1,6 @@
-package ax.clio.analysis.job;
+package ax.clio.analysis.job.repository;
+
+import ax.clio.analysis.job.entity.AnalysisJob;
 
 import java.util.List;
 
