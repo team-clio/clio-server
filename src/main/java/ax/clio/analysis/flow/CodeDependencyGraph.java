@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ax.clio.analysis.pipeline.FlowNode;
+import ax.clio.analysis.pipeline.contract.FlowNode;
 import ax.clio.code.entity.CodeSymbol;
 import ax.clio.code.entity.CodeSymbolType;
 

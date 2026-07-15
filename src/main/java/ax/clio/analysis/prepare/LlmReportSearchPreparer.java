@@ -1,6 +1,6 @@
 package ax.clio.analysis.prepare;
 
-import ax.clio.analysis.pipeline.ReportSearchPreparation;
+import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;
 
 import java.util.LinkedHashSet;
 import java.util.List;

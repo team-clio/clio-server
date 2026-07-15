@@ -1,4 +1,4 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

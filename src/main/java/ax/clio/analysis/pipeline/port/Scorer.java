@@ -1,4 +1,11 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.port;
+
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
+import ax.clio.analysis.pipeline.contract.CodeFlow;
+import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
+import ax.clio.analysis.pipeline.contract.RelatedDecisionEntry;
+import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;
+import ax.clio.analysis.pipeline.contract.SimilarIssueEntry;
 
 import java.util.List;
 

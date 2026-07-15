@@ -1,4 +1,6 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.port;
+
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
 
 import ax.clio.analysis.job.AnalysisJob;
 

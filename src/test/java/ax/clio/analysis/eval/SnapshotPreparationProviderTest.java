@@ -1,6 +1,6 @@
 package ax.clio.analysis.eval;
 
-import ax.clio.analysis.pipeline.ReportSearchPreparation;
+import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

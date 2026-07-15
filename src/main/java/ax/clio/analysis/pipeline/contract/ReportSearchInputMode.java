@@ -1,4 +1,4 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.contract;
 
 public enum ReportSearchInputMode {
 	RAW_ONLY,

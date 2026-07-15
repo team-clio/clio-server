@@ -1,8 +1,8 @@
 package ax.clio.analysis.flow;
 
-import ax.clio.analysis.pipeline.CodeFlow;
-import ax.clio.analysis.pipeline.FlowAnalyzer;
-import ax.clio.analysis.pipeline.RankedCodeCandidate;
+import ax.clio.analysis.pipeline.contract.CodeFlow;
+import ax.clio.analysis.pipeline.port.FlowAnalyzer;
+import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
 
 import java.util.List;
 

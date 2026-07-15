@@ -1,4 +1,8 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.port;
+
+import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
+import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
+import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;
 
 import java.util.List;
 

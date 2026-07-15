@@ -1,9 +1,9 @@
 package ax.clio.analysis.report;
 
 import ax.clio.analysis.job.AnalysisJob;
-import ax.clio.analysis.pipeline.AnalysisResultDraft;
-import ax.clio.analysis.pipeline.GeneratedReport;
-import ax.clio.analysis.pipeline.ReportGenerator;
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
+import ax.clio.analysis.pipeline.contract.GeneratedReport;
+import ax.clio.analysis.pipeline.port.ReportGenerator;
 
 import java.util.List;
 

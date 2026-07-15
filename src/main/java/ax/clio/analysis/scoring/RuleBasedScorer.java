@@ -1,15 +1,15 @@
 package ax.clio.analysis.scoring;
 
 import ax.clio.analysis.pipeline.AnalysisGraph;
-import ax.clio.analysis.pipeline.AnalysisResultDraft;
-import ax.clio.analysis.pipeline.CodeFlow;
-import ax.clio.analysis.pipeline.FlowNode;
-import ax.clio.analysis.pipeline.RankedCodeCandidate;
-import ax.clio.analysis.pipeline.RelatedCodeEntry;
-import ax.clio.analysis.pipeline.RelatedDecisionEntry;
-import ax.clio.analysis.pipeline.ReportSearchPreparation;
-import ax.clio.analysis.pipeline.Scorer;
-import ax.clio.analysis.pipeline.SimilarIssueEntry;
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
+import ax.clio.analysis.pipeline.contract.CodeFlow;
+import ax.clio.analysis.pipeline.contract.FlowNode;
+import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
+import ax.clio.analysis.pipeline.contract.RelatedCodeEntry;
+import ax.clio.analysis.pipeline.contract.RelatedDecisionEntry;
+import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;
+import ax.clio.analysis.pipeline.port.Scorer;
+import ax.clio.analysis.pipeline.contract.SimilarIssueEntry;
 
 import java.util.List;
 import java.util.stream.Collectors;

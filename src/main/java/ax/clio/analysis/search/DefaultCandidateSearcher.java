@@ -1,10 +1,10 @@
 package ax.clio.analysis.search;
 
-import ax.clio.analysis.pipeline.CandidateSearcher;
-import ax.clio.analysis.pipeline.RankedCodeCandidate;
-import ax.clio.analysis.pipeline.ReportSearchInput;
-import ax.clio.analysis.pipeline.ReportSearchInputMode;
-import ax.clio.analysis.pipeline.ReportSearchPreparation;
+import ax.clio.analysis.pipeline.port.CandidateSearcher;
+import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
+import ax.clio.analysis.pipeline.contract.ReportSearchInput;
+import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
+import ax.clio.analysis.pipeline.contract.ReportSearchPreparation;
 
 import java.util.List;
 

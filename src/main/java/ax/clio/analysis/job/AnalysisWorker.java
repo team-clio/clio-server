@@ -1,7 +1,7 @@
 package ax.clio.analysis.job;
 
 import ax.clio.analysis.pipeline.AnalysisGraph;
-import ax.clio.analysis.pipeline.AnalysisResultDraft;
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
 
 import ax.clio.memory.issue.IssueMemoryService;
 import ax.clio.report.entity.BugReportStatus;

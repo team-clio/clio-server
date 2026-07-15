@@ -1,4 +1,4 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.contract;
 
 /**
  * LLM이 생성한 분석 리포트 텍스트 (roadmap #10 / 4.3, L2). 사람이 읽는 3필드만 담는다 — 점수·근거·검색결과는

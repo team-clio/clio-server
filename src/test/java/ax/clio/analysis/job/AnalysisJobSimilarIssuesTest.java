@@ -1,9 +1,9 @@
 package ax.clio.analysis.job;
 
 import ax.clio.analysis.job.AnalysisJob;
-import ax.clio.analysis.pipeline.AnalysisResultDraft;
-import ax.clio.analysis.pipeline.ReportSearchInputMode;
-import ax.clio.analysis.pipeline.SimilarIssueEntry;
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
+import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
+import ax.clio.analysis.pipeline.contract.SimilarIssueEntry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -1,4 +1,7 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.port;
+
+import ax.clio.analysis.pipeline.contract.CodeFlow;
+import ax.clio.analysis.pipeline.contract.RankedCodeCandidate;
 
 import java.util.List;
 

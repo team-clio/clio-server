@@ -1,11 +1,11 @@
 package ax.clio.analysis.job;
 
-import ax.clio.analysis.pipeline.AnalysisResultDraft;
-import ax.clio.analysis.pipeline.CodeFlow;
-import ax.clio.analysis.pipeline.RelatedCodeEntry;
-import ax.clio.analysis.pipeline.RelatedDecisionEntry;
-import ax.clio.analysis.pipeline.ReportSearchInputMode;
-import ax.clio.analysis.pipeline.SimilarIssueEntry;
+import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
+import ax.clio.analysis.pipeline.contract.CodeFlow;
+import ax.clio.analysis.pipeline.contract.RelatedCodeEntry;
+import ax.clio.analysis.pipeline.contract.RelatedDecisionEntry;
+import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
+import ax.clio.analysis.pipeline.contract.SimilarIssueEntry;
 
 import java.time.Instant;
 import java.util.List;

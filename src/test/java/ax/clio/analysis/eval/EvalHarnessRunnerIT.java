@@ -1,6 +1,6 @@
 package ax.clio.analysis.eval;
 
-import ax.clio.analysis.pipeline.ReportSearchInputMode;
+import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;
 import ax.clio.analysis.prepare.LlmReportSearchPreparer;
 import ax.clio.analysis.search.CodeCandidateRanker;
 import ax.clio.analysis.search.ReportSearchInputBuilder;

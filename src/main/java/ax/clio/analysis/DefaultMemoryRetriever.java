@@ -1,9 +1,9 @@
 package ax.clio.analysis;
 
-import ax.clio.analysis.pipeline.MemoryContext;
-import ax.clio.analysis.pipeline.MemoryRetriever;
-import ax.clio.analysis.pipeline.RelatedDecisionEntry;
-import ax.clio.analysis.pipeline.SimilarIssueEntry;
+import ax.clio.analysis.pipeline.contract.MemoryContext;
+import ax.clio.analysis.pipeline.port.MemoryRetriever;
+import ax.clio.analysis.pipeline.contract.RelatedDecisionEntry;
+import ax.clio.analysis.pipeline.contract.SimilarIssueEntry;
 
 import java.util.List;
 

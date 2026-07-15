@@ -1,4 +1,4 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.contract;
 
 /**
  * 분석 결과에 붙는 "관련 설계 결정" 항목 (roadmap #9). decisionId로 결정 메모를 가리키고, score는 유사도.

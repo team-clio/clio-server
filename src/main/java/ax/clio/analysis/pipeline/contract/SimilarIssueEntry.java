@@ -1,4 +1,4 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.contract;
 
 /**
  * 분석 결과에 붙는 "유사 과거 이슈" 항목 (roadmap #8). reportId로 과거 리포트를 가리키고, score는 유사도.
