@@ -4,7 +4,6 @@ import ax.clio.analysis.pipeline.AnalysisResultDraft;
 import ax.clio.analysis.pipeline.CodeFlow;
 import ax.clio.analysis.pipeline.GeneratedReport;
 import ax.clio.analysis.pipeline.RelatedCodeEntry;
-import ax.clio.analysis.prepare.LlmReportSearchPreparer;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +20,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * rule-based 분석 draft를 근거로 사람이 읽는 리포트 텍스트(summary·fix·tests)를 LLM으로 생성한다
- * (roadmap #10 / 4.3). {@link LlmReportSearchPreparer}의 프롬프트·파싱·검증 패턴을 미러링하되, 실패 시엔
+ * (roadmap #10 / 4.3). prepare 단계의 프롬프트·파싱·검증 패턴을 미러링하되, 실패 시엔
  * <b>예외를 던지지 않고 {@link Optional#empty()}</b>를 반환해 호출자가 rule-based로 폴백하게 한다(L3).
  *
  * <p>L2: LLM은 3개 텍스트 필드만 채운다(점수·근거는 rule-based 유지). L4: 입력은 검색된 근거(점수·도메인·
