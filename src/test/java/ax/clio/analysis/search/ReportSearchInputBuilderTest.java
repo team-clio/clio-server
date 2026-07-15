@@ -1,4 +1,4 @@
-package ax.clio.analysis;
+package ax.clio.analysis.search;
 
 import ax.clio.analysis.pipeline.contract.ReportSearchInput;
 import ax.clio.analysis.pipeline.contract.ReportSearchInputMode;

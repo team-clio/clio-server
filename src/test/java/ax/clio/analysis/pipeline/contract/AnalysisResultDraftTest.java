@@ -1,4 +1,4 @@
-package ax.clio.analysis.pipeline;
+package ax.clio.analysis.pipeline.contract;
 
 import ax.clio.analysis.pipeline.contract.AnalysisResultDraft;
 import ax.clio.analysis.pipeline.contract.GeneratedReport;

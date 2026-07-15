@@ -20,7 +20,13 @@
 
 ### Phase 2 — analysis 단계별 하위 패키지
 `pipeline`(포트·계약·오케스트레이션) / `prepare` / `search` / `flow` / `scoring` / `report` / `job`.
-단계 impl은 `pipeline`(port·contract)에만 의존, 서로 참조하지 않음.
+
+> **[정정 — task-package-convention]** 이 절의 원래 서술("단계 impl은 `pipeline`에만 의존, 서로 참조하지
+> 않음")은 **사실이 아니었다.** 실제로는 `RuleBasedScorer` 가 `analysis.flow.CodeDependencyGraph.layerOf` 를
+> 직접 호출해 **scoring → flow 결합**이 남아 있었다(수용 기준 위반: flow 구현을 바꾸면 scoring 이 깨짐).
+> 또한 확정 구조였던 `pipeline/port` · `pipeline/contract` 분리가 구현되지 않아 21개 파일이 `pipeline` 한
+> 폴더에 평평하게 있었고, `DefaultMemoryRetriever` 는 단계 패키지 없이 `analysis` 루트에 있었다.
+> 후속 작업 `task-package-convention` 에서 모두 교정 — 그 시점부터 이 서술이 참이 되었다.
 
 ### Phase 3 — 전 도메인 레이어드
 - project/report/llm/code: `controller·service·repository·entity·dto`(+ llm은 `client`·`config`).
@@ -57,10 +63,24 @@ project/report/code/llm/  controller · service · repository · entity · dto (
 common/ (유지)
 ```
 
+> **[갱신 — task-package-convention]** 위 구조는 이후 다음과 같이 바뀌었다. 현재 기준은
+> `mydocs/workflow-rules.md` 의 "패키지 규칙" 절이다.
+> - `analysis/pipeline` → `port/`(6) + `contract/`(13) + 루트(`AnalysisGraph`·`AnalysisState`) 로 분리
+> - `analysis/memory/` 단계 패키지 신설(`DefaultMemoryRetriever` 이동) — 6단계 = 6포트 = 6패키지 대응
+> - `analysis/job` · `memory/decision` 레이어드(컨트롤러 보유 도메인이므로)
+> - `memory/code`·`issue`·`embedding` 은 평평 유지(내부 RAG 인프라 — 근거는 workflow-rules)
+
 ## 정직한 한계 / 남은 것
 
-1. **package 순환**: `pipeline ↔ job`(그래프가 AnalysisJob 참조, job이 계약 record 참조). Java 허용이나 이상적이진 않음.
-   필요 시 job이 참조하는 계약을 더 좁히는 후속 여지.
+1. **package 순환**: `pipeline ↔ job`. **[원인 규명 — task-package-convention]** 진짜 원인은 그래프가 아니라
+   **포트 시그니처의 JPA 엔티티 유출**이다. 포트 6개 중 5개가 영속 엔티티를 노출한다 —
+   `ReportPreparer.prepare(AnalysisJob)` · `ReportGenerator.generate(AnalysisJob, draft)` ·
+   `Scorer.score(BugReport, ...)` · `CandidateSearcher.search(BugReport, ...)` · `MemoryRetriever.retrieve(BugReport)`
+   (깨끗한 건 `FlowAnalyzer` 뿐). 즉 중립 계약 자리여야 할 `pipeline` 이 스스로 `analysis.job` 을 의존하고
+   `analysis.job` 은 다시 `pipeline` 을 의존한다.
+   **미해결 — 후속 태스크 대상.** `port`/`contract` 분리로도 이 순환은 사라지지 않는다. 해소하려면 계약
+   record(예: `AnalysisRequest`)를 도입해 포트에서 엔티티를 걷어내야 하는데, 포트 5개 시그니처 + 그래프 +
+   단계 impl + 테스트가 함께 바뀌는 설계 변경이라 컨벤션 정리와 분리했다.
 2. prepare의 raw/LLM 선택은 `DefaultReportPreparer`에 있음 — 이후 전략을 더 쪼갤 수 있음(범위 밖).
 3. 실제 기술 교체(rule-based → LLM scorer 등)는 이번이 아니라 **이 구조가 그걸 무통증으로 받게 만든 것**이 목표.
 4. 순수 리팩터라 로드맵 항목 진행도는 불변(기능 추가 없음).
