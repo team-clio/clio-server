@@ -1,6 +1,5 @@
 package ax.clio.analysis.scoring;
 
-import ax.clio.analysis.flow.CodeDependencyGraph;
 import ax.clio.analysis.pipeline.AnalysisGraph;
 import ax.clio.analysis.pipeline.AnalysisResultDraft;
 import ax.clio.analysis.pipeline.CodeFlow;
@@ -93,9 +92,8 @@ public class RuleBasedScorer implements Scorer {
 
 	private static int layerSpan(CodeFlow flow) {
 		long distinctLayers = flow.nodes().stream()
-				.map(FlowNode::role)
-				.map(CodeDependencyGraph::layerOf)
-				.filter(layer -> layer != CodeDependencyGraph.UNKNOWN_LAYER)
+				.map(FlowNode::layer)
+				.filter(layer -> layer != FlowNode.UNKNOWN_LAYER)
 				.distinct()
 				.count();
 		return (int) distinctLayers;

@@ -68,15 +68,6 @@ class CodeDependencyGraphTest {
 		assertThat(node.layer()).isEqualTo(1);
 	}
 
-	@Test
-	void layerOfMapsRolesInOrder() {
-		assertThat(CodeDependencyGraph.layerOf("CONTROLLER")).isEqualTo(0);
-		assertThat(CodeDependencyGraph.layerOf("SERVICE")).isEqualTo(1);
-		assertThat(CodeDependencyGraph.layerOf("REPOSITORY")).isEqualTo(2);
-		assertThat(CodeDependencyGraph.layerOf("ENTITY")).isEqualTo(3);
-		assertThat(CodeDependencyGraph.layerOf(null)).isEqualTo(CodeDependencyGraph.UNKNOWN_LAYER);
-	}
-
 	private static CodeSymbol classSymbol(String path, String name, String pkg, String role, boolean test,
 			String... importLines) {
 		return symbol(path, name, CodeSymbolType.CLASS, pkg, role, test, importLines);
