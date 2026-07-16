@@ -7,6 +7,3 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-
-clio:
-  workspace-root: /workspace

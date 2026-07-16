@@ -9,6 +9,3 @@ spring:
     hibernate:
       ddl-auto: ${CLIO_DDL_AUTO:update}
     open-in-view: false
-
-clio:
-  workspace-root: ${CLIO_WORKSPACE_ROOT:/workspace}
