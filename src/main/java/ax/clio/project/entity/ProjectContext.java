@@ -2,6 +2,7 @@ package ax.clio.project.entity;
 
 import java.time.Instant;
 
+import ax.clio.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -50,6 +51,10 @@ public class ProjectContext {
 
 	@Column(length = 1000)
 	private String sourceUrl;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "created_by_user_id")
+	private User createdBy;
 
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
