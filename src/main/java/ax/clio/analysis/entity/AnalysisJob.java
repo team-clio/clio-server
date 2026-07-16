@@ -6,7 +6,6 @@ import ax.clio.bug.entity.Bug;
 import ax.clio.issue.entity.Issue;
 import ax.clio.project.entity.Project;
 import ax.clio.system.entity.LlmModel;
-import ax.clio.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -56,10 +55,6 @@ public class AnalysisJob {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 30)
 	private SearchMode searchMode;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "requested_by_user_id")
-	private User requestedBy;
 
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
