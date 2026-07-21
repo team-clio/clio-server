@@ -1,30 +1,38 @@
-# clio ERD (JPA 엔티티 기준)
+# clio ERD
 
-`@Entity` 22개를 **어느 서버가 그 테이블을 신경 쓰는가** 기준으로 두 장으로 나눠 그렸다.
-이해용이므로 **양쪽에 중복 등장하는 테이블이 있다** (`bugs` · `issues` · `project_contexts` 등).
-한쪽 소유라는 뜻이 아니라, 양쪽 다 봐야 하는 테이블이라는 뜻이다.
-각 장에는 그 서버가 실제로 쓰는 컬럼만 적었으므로, 같은 테이블도 장마다 보이는 면이 다르다.
+clio는 **여러 경로로 들어온 버그 리포트를 모아 중복을 합치고, 같은 원인끼리 이슈로 묶은 뒤,
+코드·문서·과거 이력을 근거로 LLM이 분석해주는 서비스**다.
 
-컬럼 타입은 JPA 필드 기준 표기다 (`float[]` → `vector`, enum은 `EnumType.STRING`이라 실제 DDL은 varchar).
+DB 테이블 22개를 두 장으로 나눠 그렸다.
 
-> 현재 리포는 **엔티티 스켈레톤 단계**다. `JpaRepository` 구현이 0개이고,
-> `@RestController`는 아래 3개뿐이다. 그 밖의 분리선은 아직 코드에 없는 설계상의 구분이다.
->
-> | 컨트롤러 | 엔드포인트 | 닿는 테이블 |
-> |---|---|---|
-> | `BugReportController` | `POST·GET /api/v1/projects/{id}/bug-reports` | `bugs`, `bug_occurrences` |
-> | `IssueController` | `GET /api/v1/projects/{id}/issues`, `/{issueId}`, `/stats` | `issues`, `issue_bugs` |
-> | `LlmSettingsController` | `GET·PATCH·POST /api/v1/system/llm/*` | `llm_providers`, `llm_models` |
+| | 하는 일 |
+|---|---|
+| **1. Spring Boot API 서버** | 버그 수집, 이슈 조회, 프로젝트·저장소 설정, 인증 |
+| **2. Python AI 서버** | 코드 인덱싱, 임베딩, 벡터 검색, LLM 분석 |
+
+`bugs` · `issues` 처럼 **양쪽에 모두 나오는 테이블이 있다.** 한쪽 것이 아니라 양쪽 다 다루는 테이블이라는
+뜻이고, 각 장에는 그 서버가 쓰는 컬럼만 적어서 같은 테이블도 장마다 보이는 면이 다르다.
+
+컬럼 타입은 JPA 엔티티 기준 표기다 (`vector`는 pgvector, enum은 실제 DDL에서 varchar).
 
 ---
 
-## 1. Spring Boot API 서버가 신경 쓸 테이블
+## 1. Spring Boot API 서버
 
-프로젝트/저장소 설정, 버그 수집·집계, 이슈 관리, 인증, 분석 요청 접수와 결과 조회.
+### 테이블이 하는 일
 
-`code_files` · `code_symbols` · `code_chunks` 는 **여기 없다.** API 응답 어디에도 코드 인덱스가 나오지
-않고(`IssueDetailResponse` 확인), `code` 패키지에는 엔티티 외에 컨트롤러·서비스·리포지토리가 없다.
-전부 2번 소관이다.
+- **`projects`** — 모든 것의 루트. 나머지 테이블 대부분이 `project_id`를 들고 있다.
+- **`project_sources`** — 프로젝트에 연결된 Git 저장소(URL·브랜치). `repository_credentials`에 접근 토큰이 1:1로 붙는다.
+- **`project_contexts`** — 프로젝트 배경 지식 문서(설계 문서, 규칙 등). 분석할 때 참고 자료로 쓰인다.
+- **`bugs`** — 지문(`fingerprint`)으로 중복을 합친 버그 하나. 같은 에러가 100번 나도 행은 하나고 `occurrence_count`가 오른다.
+- **`bug_occurrences`** — 실제 발생 이벤트 원본. 들어온 payload를 그대로 보관한다.
+- **`bug_priority_feedbacks`** — 우선순위를 바꾼 이력.
+- **`issues`** — 같은 원인으로 판단된 버그들의 묶음. 담당자·상태·위험도를 관리하는 실제 작업 단위다.
+- **`issue_bugs`** — 어떤 버그가 어떤 이슈에 묶였는지. `grouped_by`에 묶은 방식이 남는다.
+- **`issue_branches`** — 이슈를 고치는 브랜치·PR 추적.
+- **`api_keys`** — MCP 클라이언트용 프로젝트별 API 키.
+- **`admin_accounts`** — 관리자 로그인 계정.
+- **`analysis_jobs` / `analysis_results`** — 분석 요청 접수와 결과 조회. 실행은 2번이 한다.
 
 ```mermaid
 erDiagram
@@ -206,14 +214,24 @@ erDiagram
     }
 ```
 
-`llm_providers` · `llm_models` 는 `LlmSettingsController`(설정 CRUD)가 다루지만, 모델을 실제로 호출하는
-쪽이 파이썬이라 2번에 그렸다. `analysis_results` 는 화면 조회에 쓰는 필드만 적었다 — 전체 컬럼은 2번에 있다.
+`analysis_results`는 화면 조회에 쓰는 필드만 적었다. 전체 컬럼은 2번에 있다.
 
 ---
 
-## 2. Python AI 서버가 신경 쓸 테이블
+## 2. Python AI 서버
 
-저장소 clone, 코드 인덱싱·청킹, 임베딩, 벡터 검색, LLM 분석 실행.
+### 테이블이 하는 일
+
+- **`code_files` / `code_symbols`** — 저장소를 훑어 만든 파일 목록과, 파일이 선언한 클래스·메서드 목록.
+- **`code_chunks`** — 코드를 검색 단위로 쪼갠 조각 + 그 벡터. "이 버그와 관련된 코드" 검색이 여기서 일어난다.
+- **`project_context_chunks`** — 배경 문서(`project_contexts`)를 같은 방식으로 쪼갠 조각 + 벡터.
+- **`bug_embeddings`** — 버그 텍스트의 벡터. 비슷한 버그를 찾아 이슈로 묶을 때 쓴다.
+- **`decision_memories`** — 과거에 내린 판단·결정 기록 + 벡터. 분석할 때 "예전에 이렇게 정했다"를 근거로 끌어온다.
+- **`llm_providers` / `llm_models`** — 어떤 LLM 업체의 어떤 모델을 쓸지. `purpose`로 분석용·임베딩용을 나눈다.
+- **`analysis_jobs`** — 분석 잡. 상태를 진행시키며 실행한다.
+- **`analysis_results`** — 분석 결과. 점수·요약·수정 제안과, 근거로 쓴 코드·유사 이슈를 jsonb로 남긴다.
+
+벡터를 만들 때 원본 테이블(`bugs`, `code_files`, `project_contexts`)을 읽는다.
 
 ```mermaid
 erDiagram
@@ -425,17 +443,24 @@ erDiagram
     }
 ```
 
-`admin_accounts` · `api_keys` · `issue_branches` · `bug_priority_feedbacks` 는 여기 없다. 분석 파이프라인이
-읽을 일이 없다.
-
 ---
 
-## 읽는 포인트
+## 테이블 목록
 
-- **`projects`가 양쪽 모두의 루트다.** 8개 테이블이 직접 `project_id`를 들고 있다.
-- **임베딩 저장 위치가 두 갈래다** — `bug_embeddings`만 별도 테이블(1:N)이고,
-  `code_chunks` · `project_context_chunks` · `decision_memories`는 엔티티 내부 컬럼(1:1)이다.
-  Bug만 모델 교체 시 복수 벡터를 들 수 있는 구조인데, 의도한 비대칭인지 확인이 필요하다.
-- **`analysis_jobs.bug_id` · `issue_id`는 둘 다 nullable** — 버그 단위/이슈 단위 분석을 한 테이블로 받는다.
-  DB 제약으로 "둘 중 정확히 하나"가 강제되지 않아, 둘 다 null이거나 둘 다 채워진 행이 들어갈 수 있다.
-- **`admin_accounts`는 어디와도 연결되지 않는다.** 이슈 담당자는 FK가 아니라 `issues.assignee_name` 문자열이다.
+**API 서버에만 (4)** — `bug_priority_feedbacks`, `issue_branches`, `api_keys`, `admin_accounts`
+
+**AI 서버에만 (8)** — `code_files`, `code_chunks`, `code_symbols`, `project_context_chunks`,
+`bug_embeddings`, `decision_memories`, `llm_providers`, `llm_models`
+
+**양쪽 (10)** — `projects`, `project_sources`, `repository_credentials`, `project_contexts`,
+`bugs`, `bug_occurrences`, `issues`, `issue_bugs`, `analysis_jobs`, `analysis_results`
+
+## 데이터가 흐르는 순서
+
+1. 버그 리포트가 들어온다 → `bug_occurrences`에 원본 적재, 지문으로 `bugs` 행을 찾거나 만든다
+2. 버그 텍스트를 임베딩한다 → `bug_embeddings`
+3. 비슷한 버그끼리 묶는다 → `issues` + `issue_bugs`
+4. 저장소를 인덱싱해둔다 → `code_files` → `code_symbols` · `code_chunks`
+5. 분석을 건다 → `analysis_jobs` 생성
+6. 벡터 검색으로 근거를 모은다 → `code_chunks` · `project_context_chunks` · `decision_memories`
+7. LLM이 분석한다 → `analysis_results`에 점수·요약·수정 제안 기록
