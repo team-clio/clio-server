@@ -56,6 +56,9 @@ public class Bug {
 	@Column(nullable = false, length = 50)
 	private BugSource source;
 
+	@Column(length = 100)
+	private String reporterName;
+
 	@Column(length = 255)
 	private String errorType;
 
