@@ -4,5 +4,9 @@ public enum BugSource {
 	API,
 	SENTRY,
 	LOG,
-	MANUAL
+	MANUAL,
+	IN_APP_WIDGET,
+	CUSTOMER_SUPPORT,
+	EMAIL,
+	SLACK
 }

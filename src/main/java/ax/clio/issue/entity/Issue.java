@@ -1,5 +1,6 @@
 package ax.clio.issue.entity;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 import ax.clio.bug.entity.Priority;
@@ -58,6 +59,12 @@ public class Issue {
 	private Integer importanceScore;
 
 	private Integer riskScore;
+
+	@Column(length = 100)
+	private String assigneeName;
+
+	@Column(precision = 5, scale = 4)
+	private BigDecimal aiConfidence;
 
 	@Column(nullable = false)
 	private int bugCount;
