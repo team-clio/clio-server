@@ -1,22 +1,35 @@
 # clio ERD (JPA 엔티티 기준)
 
 `@Entity` 22개를 **어느 서버가 그 테이블을 신경 쓰는가** 기준으로 두 장으로 나눠 그렸다.
-이해용이므로 **양쪽에 중복 등장하는 테이블이 있다** (`bugs` · `issues` · `code_files` 등).
-한쪽에만 있는 게 아니라, 양쪽 다 봐야 하는 테이블이라는 뜻이다.
+이해용이므로 **양쪽에 중복 등장하는 테이블이 있다** (`bugs` · `issues` · `project_contexts` 등).
+한쪽 소유라는 뜻이 아니라, 양쪽 다 봐야 하는 테이블이라는 뜻이다.
+각 장에는 그 서버가 실제로 쓰는 컬럼만 적었으므로, 같은 테이블도 장마다 보이는 면이 다르다.
 
 컬럼 타입은 JPA 필드 기준 표기다 (`float[]` → `vector`, enum은 `EnumType.STRING`이라 실제 DDL은 varchar).
+
+> 현재 리포는 **엔티티 스켈레톤 단계**다. `JpaRepository` 구현이 0개이고,
+> `@RestController`는 아래 3개뿐이다. 그 밖의 분리선은 아직 코드에 없는 설계상의 구분이다.
+>
+> | 컨트롤러 | 엔드포인트 | 닿는 테이블 |
+> |---|---|---|
+> | `BugReportController` | `POST·GET /api/v1/projects/{id}/bug-reports` | `bugs`, `bug_occurrences` |
+> | `IssueController` | `GET /api/v1/projects/{id}/issues`, `/{issueId}`, `/stats` | `issues`, `issue_bugs` |
+> | `LlmSettingsController` | `GET·PATCH·POST /api/v1/system/llm/*` | `llm_providers`, `llm_models` |
 
 ---
 
 ## 1. Spring Boot API 서버가 신경 쓸 테이블
 
-CRUD·조회 API를 제공하고 쓰기를 소유하는 범위. 프로젝트/저장소 설정, 버그 수집·집계, 이슈 관리, 인증.
+프로젝트/저장소 설정, 버그 수집·집계, 이슈 관리, 인증, 분석 요청 접수와 결과 조회.
+
+`code_files` · `code_symbols` · `code_chunks` 는 **여기 없다.** API 응답 어디에도 코드 인덱스가 나오지
+않고(`IssueDetailResponse` 확인), `code` 패키지에는 엔티티 외에 컨트롤러·서비스·리포지토리가 없다.
+전부 2번 소관이다.
 
 ```mermaid
 erDiagram
     PROJECTS ||--o{ PROJECT_SOURCES : has
     PROJECTS ||--o{ PROJECT_CONTEXTS : has
-    PROJECTS ||--o{ CODE_FILES : indexes
     PROJECTS ||--o{ BUGS : collects
     PROJECTS ||--o{ ISSUES : groups
     PROJECTS ||--o{ API_KEYS : issues
@@ -24,8 +37,6 @@ erDiagram
 
     PROJECT_SOURCES ||--o| REPOSITORY_CREDENTIALS : "1:1 token"
     PROJECT_SOURCES ||--o{ ISSUE_BRANCHES : "branch on"
-
-    CODE_FILES ||--o{ CODE_SYMBOLS : declares
 
     BUGS ||--o{ BUG_OCCURRENCES : "raw events"
     BUGS ||--o{ BUG_PRIORITY_FEEDBACKS : "priority log"
@@ -75,31 +86,6 @@ erDiagram
         instant created_at
         instant updated_at
     }
-    CODE_FILES {
-        bigint id PK
-        bigint project_id FK
-        varchar path "UK(project_id,path)"
-        varchar file_name
-        varchar language
-        boolean test
-        bigint size_bytes
-        varchar content_hash
-        instant last_modified_at
-        instant indexed_at
-    }
-    CODE_SYMBOLS {
-        bigint id PK
-        bigint file_id FK
-        varchar name
-        varchar qualified_name
-        varchar signature
-        enum type "CodeSymbolType"
-        varchar role
-        varchar package_name
-        int start_line
-        int end_line
-        text annotations
-    }
     BUGS {
         bigint id PK
         bigint project_id FK
@@ -146,7 +132,7 @@ erDiagram
         enum severity "Severity"
         int risk_score
         varchar assignee_name
-        decimal ai_confidence "5,4 · AI가 채움"
+        decimal ai_confidence "5,4"
         int bug_count
         int occurrence_count
         instant first_seen_at
@@ -158,7 +144,7 @@ erDiagram
         bigint id PK
         bigint issue_id FK "UK(issue_id,bug_id)"
         bigint bug_id FK
-        decimal confidence "AI가 채움"
+        decimal confidence
         enum grouped_by "IssueGroupingMethod"
         instant created_at
     }
@@ -220,15 +206,14 @@ erDiagram
     }
 ```
 
-`analysis_jobs` · `analysis_results`가 여기 있는 이유: **분석 요청 접수와 결과 조회는 API 서버의 일**이다.
-잡을 만들고(`PENDING`) 결과를 화면에 내려주는 쪽은 Java고, 그 사이를 채우는 게 파이썬이다.
-그래서 `analysis_results`는 조회에 쓰는 필드만 적었다 — 전체 컬럼은 2번에 있다.
+`llm_providers` · `llm_models` 는 `LlmSettingsController`(설정 CRUD)가 다루지만, 모델을 실제로 호출하는
+쪽이 파이썬이라 2번에 그렸다. `analysis_results` 는 화면 조회에 쓰는 필드만 적었다 — 전체 컬럼은 2번에 있다.
 
 ---
 
 ## 2. Python AI 서버가 신경 쓸 테이블
 
-인덱싱·임베딩·검색·LLM 분석. 벡터를 만들고 잡을 실행해 결과를 채우는 범위.
+저장소 clone, 코드 인덱싱·청킹, 임베딩, 벡터 검색, LLM 분석 실행.
 
 ```mermaid
 erDiagram
@@ -248,7 +233,7 @@ erDiagram
 
     BUGS ||--o{ BUG_EMBEDDINGS : embeds
     BUGS ||--o{ BUG_OCCURRENCES : "분석 입력"
-    BUGS ||--o{ ISSUE_BUGS : "grouped into"
+    BUGS   ||--o{ ISSUE_BUGS : "grouped into"
     ISSUES ||--o{ ISSUE_BUGS : contains
 
     LLM_PROVIDERS ||--o{ LLM_MODELS : offers
@@ -440,52 +425,14 @@ erDiagram
     }
 ```
 
-읽기만 하는 테이블(`projects` · `bugs` · `issues` · `project_contexts` 등)은 분석에 실제로 쓰는 컬럼만 적었다.
-전체 컬럼은 1번에 있다.
+`admin_accounts` · `api_keys` · `issue_branches` · `bug_priority_feedbacks` 는 여기 없다. 분석 파이프라인이
+읽을 일이 없다.
 
 ---
 
-## 테이블 × 서버 대응
+## 읽는 포인트
 
-| 테이블 | Spring API | Python AI |
-|---|---|---|
-| `projects` | 쓰기 | 읽기 |
-| `project_sources` | 쓰기 | 읽기 (clone) |
-| `repository_credentials` | 쓰기 | 읽기 (clone) |
-| `project_contexts` | 쓰기 | 읽기 |
-| `project_context_chunks` | — | 쓰기 |
-| `code_files` | 읽기 | 쓰기 (인덱싱) |
-| `code_symbols` | 읽기 | 쓰기 (파싱) |
-| `code_chunks` | — | 쓰기 |
-| `bugs` | 쓰기 | 읽기 |
-| `bug_occurrences` | 쓰기 | 읽기 |
-| `bug_embeddings` | — | 쓰기 |
-| `bug_priority_feedbacks` | 쓰기 | — |
-| `issues` | 쓰기 | 일부 쓰기 (`risk_score`·`ai_confidence`) |
-| `issue_bugs` | 읽기 | 쓰기 (그룹핑) |
-| `issue_branches` | 쓰기 | — |
-| `analysis_jobs` | 생성·조회 | 상태 전이 |
-| `analysis_results` | 읽기 | 쓰기 |
-| `llm_providers` / `llm_models` | 설정 CRUD | 읽기 |
-| `api_keys` | 쓰기 | — |
-| `admin_accounts` | 쓰기 | — |
-
-## 이 표를 보며 정해야 할 것
-
-이 "쓰기 소유" 칸은 **제가 코드에서 읽은 게 아니라 역할에서 추정한 값**입니다. 특히 세 줄이 근거가 약합니다.
-
-1. **`code_files` · `code_symbols`를 파이썬이 쓴다고 뒀습니다.** 청킹·임베딩이 파이썬이면 파일 스캔도 같이 가는 게
-   자연스럽지만, Java가 스캔하고 파이썬이 청크만 만드는 분리도 가능합니다. 후자면 파일 하나 인덱싱에 두 서버가 관여합니다.
-2. **`repository_credentials`를 파이썬이 읽습니다.** clone 주체가 파이썬이라는 전제인데,
-   토큰 접근 주체가 늘어나는 결정이라 따로 볼 값어치가 있습니다.
-3. **`issues`를 양쪽이 씁니다.** Java가 상태·담당자를, 파이썬이 `risk_score`·`ai_confidence`를 쓰는 부분 소유입니다.
-   같은 행을 두 서버가 갱신하는 유일한 자리입니다.
-
-그리고 두 서버가 **DB를 직접 공유할지, 파이썬이 Java API로만 접근할지**가 위 표 전체의 전제입니다.
-지금은 공유를 가정하고 그렸습니다.
-
-## 그 밖에 눈에 띈 것
-
+- **`projects`가 양쪽 모두의 루트다.** 8개 테이블이 직접 `project_id`를 들고 있다.
 - **임베딩 저장 위치가 두 갈래다** — `bug_embeddings`만 별도 테이블(1:N)이고,
   `code_chunks` · `project_context_chunks` · `decision_memories`는 엔티티 내부 컬럼(1:1)이다.
   Bug만 모델 교체 시 복수 벡터를 들 수 있는 구조인데, 의도한 비대칭인지 확인이 필요하다.
