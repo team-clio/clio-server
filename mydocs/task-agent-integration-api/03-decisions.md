@@ -64,3 +64,37 @@
 
 - 이후 생성하는 Agent 연동 DTO마다 snake_case 직렬화 계약 테스트를 작성한다.
 - 다음 결정: D3 정규화 리포트와 분석 결과 저장 방식
+
+## D3. 정규화 리포트와 분석 결과 저장 방식
+
+- 결정일: 2026-08-09
+- 상태: 확정·반영 완료
+- 선택: **기존 Agent의 snapshot·소유권 결정을 계승**
+
+### 기존 결정
+
+- `NormalizedReport`는 Agent가 append-only JSON snapshot으로 보존한다.
+- `bug_retrieval_documents`와 `bug_embeddings`는 Python/Alembic이 소유한다.
+- 재분석은 기존 결과를 수정하지 않고 새 `analysis_job_id`의 전체 `IssueAnalysis` snapshot을 만든다.
+- PCM 상세 이력과 검색 인덱스도 Agent가 소유한다.
+
+### 적용 방식
+
+- Server는 `NormalizedReport`를 별도 테이블이나 `Bug` 컬럼에 복제하지 않는다.
+- Server의 `AnalysisResult`는 분석 작업당 하나의 완전한 `IssueAnalysis` JSONB snapshot을 보관한다.
+- 결과 상태와 이전 분석 작업 참조만 별도 컬럼으로 두며 project와 issue는 `AnalysisJob` 관계로 조회한다.
+- `AnalysisResult`는 생성 후 내용을 덮어쓰지 않는다. 재분석은 새 Job과 새 Result를 생성한다.
+- 기존 Server의 점수·요약·추천별 컬럼은 최신 `IssueAnalysis` 계약과 일치하지 않아 JPA 모델에서 제거한다.
+
+### 결정 근거
+
+- 정규화 결과를 양쪽에서 저장하면 active version과 소유권이 갈라진다.
+- 완전한 JSON snapshot은 Evidence→Finding→Hypothesis 참조 구조를 손실 없이 보존한다.
+- 분석별 immutable snapshot은 과거 분석 재현과 `revision_summary` 해석에 필요하다.
+- 조회에 필요한 관계는 `AnalysisJob`이 이미 project, issue, trigger bug를 보유한다.
+
+### API 영향
+
+- 매칭 결과 API는 정규화 본문을 Server 정본으로 저장하지 않고 매칭 결정과 식별 참조를 기록한다.
+- 분석 문맥 API는 Server의 Issue·Bug·Report 식별 문맥을 제공하고, Agent가 자기 active 정규화 snapshot을 결합한다.
+- 다음 결정: D4 결과 반영 API의 멱등성
