@@ -3,6 +3,9 @@
 이 문서는 clio의 **모든 작업**이 따라야 하는 절차다. AI(Claude)는 이 규칙을 **절대 위배하지 않는다.**
 예외가 필요하면 진행하기 전에 사용자에게 명시적으로 확인받는다.
 
+Issue, PR, `README`, `docs`, `mydocs` 등 모든 글은
+[`document-writing-rules.md`](document-writing-rules.md)의 공통 문서 작성 규칙도 함께 따른다.
+
 ## 대원칙
 
 > **결정은 언제나 사용자가 한다. AI는 선택지를 제시하고 추천할 뿐, 사용자를 대신해 결정하지 않는다.**
