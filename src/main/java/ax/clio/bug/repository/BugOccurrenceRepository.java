@@ -20,6 +20,24 @@ public interface BugOccurrenceRepository extends JpaRepository<BugOccurrence, Lo
 
 	Optional<BugOccurrence> findFirstByBugIdOrderByOccurredAtDesc(Long bugId);
 
+	java.util.List<BugOccurrence> findByBugIdOrderByOccurredAtDesc(Long bugId);
+
+	@Query("""
+			select occurrence
+			from BugOccurrence occurrence
+			join occurrence.bug bug
+			join IssueBug issueBug on issueBug.bug = bug
+			where issueBug.issue.project.id = :projectId
+			  and (:from is null or occurrence.occurredAt >= :from)
+			  and (:to is null or occurrence.occurredAt <= :to)
+			order by occurrence.occurredAt
+			""")
+	java.util.List<BugOccurrence> findLinkedForStats(
+			Long projectId,
+			Instant from,
+			Instant to
+	);
+
 	@Query("""
 			select distinct occurrence
 			from BugOccurrence occurrence
