@@ -1,6 +1,7 @@
 package ax.clio.analysis.entity;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import ax.clio.bug.entity.Bug;
 import ax.clio.issue.entity.Issue;
@@ -45,6 +46,10 @@ public class AnalysisJob {
 	private Issue issue;
 
 	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "previous_analysis_job_id")
+	private AnalysisJob previousAnalysisJob;
+
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "llm_model_id")
 	private LlmModel llmModel;
 
@@ -65,6 +70,50 @@ public class AnalysisJob {
 
 	@Column(length = 1000)
 	private String failureReason;
+
+	public static AnalysisJob create(
+			Project project,
+			Bug triggerBug,
+			Issue issue,
+			AnalysisJob previousAnalysisJob
+	) {
+		AnalysisJob job = new AnalysisJob();
+		job.project = Objects.requireNonNull(project);
+		job.bug = Objects.requireNonNull(triggerBug);
+		job.issue = Objects.requireNonNull(issue);
+		job.previousAnalysisJob = previousAnalysisJob;
+		job.status = AnalysisJobStatus.PENDING;
+		job.searchMode = SearchMode.HYBRID;
+		return job;
+	}
+
+	public void start() {
+		if (status != AnalysisJobStatus.PENDING) {
+			throw new IllegalStateException("Only a PENDING analysis job can start.");
+		}
+		status = AnalysisJobStatus.RUNNING;
+		startedAt = Instant.now();
+	}
+
+	public void fail(String reason) {
+		if (status != AnalysisJobStatus.PENDING && status != AnalysisJobStatus.RUNNING) {
+			throw new IllegalStateException("Only a PENDING or RUNNING analysis job can fail.");
+		}
+		if (reason == null || reason.isBlank()) {
+			throw new IllegalArgumentException("failureReason is required for FAILED status.");
+		}
+		status = AnalysisJobStatus.FAILED;
+		failureReason = reason;
+		completedAt = Instant.now();
+	}
+
+	public void complete() {
+		if (status != AnalysisJobStatus.RUNNING) {
+			throw new IllegalStateException("Only a RUNNING analysis job can complete.");
+		}
+		status = AnalysisJobStatus.COMPLETED;
+		completedAt = Instant.now();
+	}
 
 	@PrePersist
 	void prePersist() {

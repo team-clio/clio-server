@@ -27,29 +27,31 @@
 
 ## 목표
 
-다음 8개 Agent 연동 API를 실제 DB 트랜잭션까지 동작하도록 구현한다.
+다음 9개 Agent 연동 API를 실제 DB 트랜잭션까지 동작하도록 구현한다.
 
 ### Agent 결과 반영 API
 
 1. `POST /api/v1/projects/{projectId}/bugs/{bugId}/match-decisions`
    - 정규화 리포트와 매칭 결정을 멱등 반영
    - 기존 이슈 연결, 검토 대기, 새 이슈 생성 결과 처리
-2. `PUT /api/v1/projects/{projectId}/analysis-jobs/{jobId}/result`
+2. `POST /api/v1/projects/{projectId}/issues/{issueId}/analysis-jobs`
+   - 최초 분석 또는 재분석을 위한 분석 작업 생성
+3. `PUT /api/v1/projects/{projectId}/analysis-jobs/{jobId}/result`
    - 구조화된 분석 결과를 멱등 저장
-3. `PATCH /api/v1/projects/{projectId}/analysis-jobs/{jobId}`
+4. `PATCH /api/v1/projects/{projectId}/analysis-jobs/{jobId}`
    - 분석 작업의 실행 상태·실패 사유 갱신
-4. `PUT /api/v1/projects/{projectId}/contexts/{contextId}/sync-result`
+5. `PUT /api/v1/projects/{projectId}/contexts/{contextId}/sync-result`
    - 프로젝트 컨텍스트 동기화 상태와 revision 반영
-5. `PUT /api/v1/projects/{projectId}/sources/{sourceId}/sync-result`
+6. `PUT /api/v1/projects/{projectId}/sources/{sourceId}/sync-result`
    - 코드 소스 동기화 상태와 commit/revision 반영
 
 ### Agent 입력 조회 API
 
-6. `GET /api/v1/projects/{projectId}/bug-reports/{reportId}`
+7. `GET /api/v1/projects/{projectId}/bug-reports/{reportId}`
    - 원문 payload를 포함한 단일 버그 리포트 조회
-7. `GET /api/v1/projects/{projectId}/issues/{issueId}/analysis-context`
-   - 분석 실행에 필요한 이슈·연결 버그·정규화 리포트 스냅샷 조회
-8. `GET /api/v1/projects/{projectId}/agent-context-snapshot`
+8. `GET /api/v1/projects/{projectId}/analysis-jobs/{jobId}/context`
+   - 분석 실행에 필요한 이슈·대표 버그 식별자·이전 분석 스냅샷 조회
+9. `GET /api/v1/projects/{projectId}/agent-context-snapshot`
    - 프로젝트 컨텍스트 revision과 활성 소스 commit의 일관된 스냅샷 조회
 
 ## 함께 구현할 기반 기능
@@ -82,7 +84,7 @@
 
 ## 완료 기준
 
-- 8개 연동 API와 의존 버그/이슈 API가 더 이상 `501`을 반환하지 않는다.
+- 9개 연동 API와 의존 버그/이슈 API가 더 이상 `501`을 반환하지 않는다.
 - 잘못된 프로젝트 소속, 존재하지 않는 리소스, validation 실패가 일관된 4xx 응답을 반환한다.
 - 결과 반영 API는 동일 요청 재시도 시 데이터가 중복 생성되지 않는다.
 - 매칭 결정과 분석 작업 상태 변경은 트랜잭션 경계에서 일관되게 반영된다.

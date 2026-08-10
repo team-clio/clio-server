@@ -3,7 +3,7 @@
 ## 독자와 목적
 
 - 예상 독자: Clio Server·Agent Graph 구현자와 API 리뷰어
-- 목적: 8개 연동 API와 의존 API의 구현 순서, 경계, 결정할 사항을 합의한다.
+- 목적: 9개 연동 API와 의존 API의 구현 순서, 경계, 결정할 사항을 합의한다.
 - 기준 계약: `clio-agent-graph`의 `normalization`, `matching`, `analysis`, `pcm` 공개 모델
 
 ## 구현 단계
@@ -16,7 +16,7 @@
 
 ### S2. API 계약과 공통 기반
 
-- 8개 API의 요청·응답 DTO, enum, validation을 정의한다.
+- 9개 API의 요청·응답 DTO, enum, validation을 정의한다.
 - Agent 연동 DTO만 `snake_case` JSON을 사용하고 기존 사용자 API 형식은 유지하는 방안을 검토한다(D2).
 - 404·409·422 등 공통 오류 응답과 `@RestControllerAdvice`를 구현한다.
 - 프로젝트 소속 검증과 멱등 처리 기반을 구현한다(D4).
@@ -59,12 +59,13 @@
 | API | 정상 응답 | 핵심 동작 |
 |---|---:|---|
 | `POST .../bugs/{bugId}/match-decisions` | 200/201 | 정규화 결과 저장 후 매칭 결정 적용 |
+| `POST .../issues/{issueId}/analysis-jobs` | 201 | 최초 분석·재분석 작업 생성 |
 | `PUT .../analysis-jobs/{jobId}/result` | 200/201 | 완전한 분석 snapshot 저장 |
 | `PATCH .../analysis-jobs/{jobId}` | 200 | 작업 상태 전이 |
 | `PUT .../contexts/{contextId}/sync-result` | 200 | 문서·PCM revision 반영 |
 | `PUT .../sources/{sourceId}/sync-result` | 200 | active commit·PCM revision 반영 |
 | `GET .../bug-reports/{reportId}` | 200 | Agent NM 입력과 원문 payload 반환 |
-| `GET .../issues/{issueId}/analysis-context` | 200 | IA 입력 문맥과 이전 분석 반환 |
+| `GET .../analysis-jobs/{jobId}/context` | 200 | IA 입력 문맥과 이전 분석 반환 |
 | `GET .../agent-context-snapshot` | 200 | PCM revision과 Repository commit map 반환 |
 
 `reportId`는 한 번의 수집 사건인 `BugOccurrence.id`, `bugId`는 중복 발생을 묶는 `Bug.id`로
