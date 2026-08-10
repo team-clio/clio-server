@@ -98,3 +98,31 @@
 - 매칭 결과 API는 정규화 본문을 Server 정본으로 저장하지 않고 매칭 결정과 식별 참조를 기록한다.
 - 분석 문맥 API는 Server의 Issue·Bug·Report 식별 문맥을 제공하고, Agent가 자기 active 정규화 snapshot을 결합한다.
 - 다음 결정: D4 결과 반영 API의 멱등성
+
+## D4. 결과 반영 API의 멱등성
+
+- 결정일: 2026-08-10
+- 상태: 확정·반영 완료
+- 선택: **Agent 요청 body의 `requestId`를 공통 멱등 키로 사용**
+
+### 적용 방식
+
+- Agent 연동 write DTO는 `requestId`를 필수로 받으며 JSON에서는 `request_id`로 표현한다.
+- `(project, operationType, requestId)`를 고유 키로 저장한다.
+- 최초 처리 시 canonical JSON 요청 해시, HTTP 상태, 응답 snapshot을 함께 저장한다.
+- 동일 키와 동일 payload의 재처리는 도메인 로직을 다시 실행하지 않고 기존 응답을 반환한다.
+- 동일 키와 다른 payload가 들어오면 `409 Conflict` 대상 예외를 발생시킨다.
+- 프로젝트 행에 비관적 쓰기 잠금을 걸어 동일 프로젝트의 최초 처리 경쟁을 직렬화한다.
+
+### 결정 근거
+
+- Agent Root Graph와 PCM은 이미 `request_id`를 source event 식별자로 사용한다.
+- 별도 HTTP 헤더로 옮기는 adapter 없이 실행 ID를 end-to-end로 추적할 수 있다.
+- 결과 응답까지 저장하면 timeout 뒤 재시도에도 최초 처리 결과를 동일하게 돌려줄 수 있다.
+- 리소스 unique constraint만으로는 같은 요청의 payload 충돌과 응답 복원이 불가능하다.
+
+### 범위
+
+- 적용: 매칭 결정, 분석 결과, 분석 작업 상태, Context 동기화, Source 동기화 API
+- 비적용: 사용자용 Bug Report 수집 API
+- 다음 결정: D5 매칭 결정 적용 규칙
