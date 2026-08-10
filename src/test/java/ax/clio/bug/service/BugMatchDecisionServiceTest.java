@@ -155,24 +155,19 @@ class BugMatchDecisionServiceTest {
 	private Fixture fixture() {
 		Project project = projectRepository.save(Project.create("Clio", null));
 		Instant occurredAt = Instant.parse("2026-08-10T00:00:00Z");
-		Bug bug = bugRepository.save(Bug.create(
+		BugOccurrence report = BugOccurrence.collect(
 				project,
-				"fingerprint",
-				"source",
+				BugSource.API,
 				"Saved search fails",
 				"HTTP 500",
-				BugSource.API,
 				"IllegalStateException",
 				"saved search failed",
-				"SavedSearchService.run",
-				occurredAt
-		));
-		BugOccurrence report = occurrenceRepository.save(BugOccurrence.create(
-				bug,
-				BugSource.API,
+				List.of("SavedSearchService.run"),
 				OBJECT_MAPPER.createObjectNode().put("status", 500),
 				occurredAt
-		));
+		);
+		Bug bug = bugRepository.save(Bug.createFrom(report));
+		report = occurrenceRepository.save(report);
 		return new Fixture(project, bug, report);
 	}
 

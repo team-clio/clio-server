@@ -18,17 +18,13 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(
-		name = "bugs",
-		uniqueConstraints = @UniqueConstraint(name = "uk_bugs_project_fingerprint", columnNames = {"project_id", "fingerprint"})
-)
+@Table(name = "bugs")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Bug {
 
@@ -39,13 +35,6 @@ public class Bug {
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "project_id", nullable = false)
 	private Project project;
-
-	@Column(nullable = false, length = 128)
-	private String fingerprint;
-
-	@Lob
-	@Column(nullable = false)
-	private String fingerprintSource;
 
 	@Column(nullable = false, length = 200)
 	private String title;
@@ -92,33 +81,36 @@ public class Bug {
 	@Column(nullable = false)
 	private Instant updatedAt;
 
-	public static Bug create(
-			Project project,
-			String fingerprint,
-			String fingerprintSource,
-			String title,
-			String description,
-			BugSource source,
-			String errorType,
-			String normalizedMessage,
-			String topApplicationFrame,
-			Instant occurredAt
-	) {
+	public static Bug createFrom(BugOccurrence occurrence) {
+		Objects.requireNonNull(occurrence);
+		if (occurrence.getBug() != null) {
+			throw new IllegalStateException("Bug report is already grouped.");
+		}
 		Bug bug = new Bug();
-		bug.project = Objects.requireNonNull(project);
-		bug.fingerprint = Objects.requireNonNull(fingerprint);
-		bug.fingerprintSource = Objects.requireNonNull(fingerprintSource);
-		bug.title = Objects.requireNonNull(title);
-		bug.description = description;
-		bug.source = Objects.requireNonNull(source);
-		bug.errorType = errorType;
-		bug.normalizedMessage = normalizedMessage;
-		bug.topApplicationFrame = topApplicationFrame;
+		bug.project = occurrence.getProject();
+		bug.title = occurrence.displayTitle();
+		bug.description = occurrence.getDescription();
+		bug.source = occurrence.getSource();
+		bug.errorType = occurrence.getErrorType();
+		bug.normalizedMessage = occurrence.getMessage();
+		bug.topApplicationFrame = occurrence.firstStackFrame();
 		bug.occurrenceCount = 1;
 		bug.status = BugStatus.NEW;
-		bug.firstSeenAt = Objects.requireNonNull(occurredAt);
-		bug.lastSeenAt = occurredAt;
+		bug.firstSeenAt = occurrence.getOccurredAt();
+		bug.lastSeenAt = occurrence.getOccurredAt();
+		occurrence.attachTo(bug);
 		return bug;
+	}
+
+	public void recordOccurrence(BugOccurrence occurrence) {
+		Objects.requireNonNull(occurrence).attachTo(this);
+		this.occurrenceCount += 1;
+		if (occurrence.getOccurredAt().isBefore(this.firstSeenAt)) {
+			this.firstSeenAt = occurrence.getOccurredAt();
+		}
+		if (occurrence.getOccurredAt().isAfter(this.lastSeenAt)) {
+			this.lastSeenAt = occurrence.getOccurredAt();
+		}
 	}
 
 	public void markTriaged() {

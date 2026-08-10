@@ -5,10 +5,10 @@ import java.time.Instant;
 public record BugReportResponse(
 		Long id,
 		Long projectId,
+		Long bugId,
 		Long issueId,
 		String title,
 		String source,
-		String fingerprint,
 		String errorType,
 		String topApplicationFrame,
 		String status,

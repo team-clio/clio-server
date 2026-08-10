@@ -3,7 +3,7 @@
 ## 독자와 목적
 
 - 예상 독자: Clio Server·Agent Graph 구현자와 API 리뷰어
-- 목적: 6개 연동 API와 의존 API의 구현 순서, 경계, 결정할 사항을 합의한다.
+- 목적: 7개 연동 API와 의존 API의 구현 순서, 경계, 결정할 사항을 합의한다.
 - 기준 계약: `clio-agent-graph`의 `normalization`, `matching`, `analysis`, `pcm` 공개 모델
 
 ## 구현 단계
@@ -16,7 +16,7 @@
 
 ### S2. API 계약과 공통 기반
 
-- 6개 API의 요청·응답 DTO, enum, validation을 정의한다.
+- 7개 API의 요청·응답 DTO, enum, validation을 정의한다.
 - Agent 연동 DTO만 `snake_case` JSON을 사용하고 기존 사용자 API 형식은 유지하는 방안을 검토한다(D2).
 - 404·409·422 등 공통 오류 응답과 `@RestControllerAdvice`를 구현한다.
 - 프로젝트 소속 검증과 멱등 처리 기반을 구현한다(D4).
@@ -25,6 +25,7 @@
 
 - `Project`, `Bug`, `BugOccurrence`, `Issue`, `IssueBug` Repository를 추가한다.
 - 버그 리포트 수집·목록·상세 조회를 구현한다.
+- Agent의 Bug grouping 결정을 반영하고 Server fingerprint를 제거한다(D8).
 - 원문 Report와 정규화 스냅샷의 저장 관계를 구현한다(D3, D8).
 - 매칭 결정을 기록하고 기존 이슈 연결·검토 대기·신규 이슈 생성을 적용한다(D5).
 
@@ -58,6 +59,7 @@
 
 | API | 정상 응답 | 핵심 동작 |
 |---|---:|---|
+| `POST .../bug-reports/{reportId}/grouping-decisions` | 200/201 | Agent Bug grouping 결정 반영 |
 | `POST .../bugs/{bugId}/match-decisions` | 200/201 | 매칭 결정 기록 및 Issue 연결 적용 |
 | `POST .../issues/{issueId}/analysis-jobs` | 201 | 최초 분석·재분석 작업 생성 |
 | `PUT .../analysis-jobs/{jobId}/result` | 200/201 | 완전한 분석 snapshot 저장 |
@@ -119,11 +121,11 @@
 
 ### D8. 버그 수집 시 동일 Bug 판정
 
-- A. `errorType + message + 첫 application stack frame + title`의 정규화 문자열을 SHA-256으로
-  fingerprint하고, 같은 프로젝트 내 동일 fingerprint는 새 `BugOccurrence`로 누적한다.
-- B. 모든 수집 요청마다 새 Bug를 만든다.
-- C. 호출자가 fingerprint를 제공하게 한다.
-- 추천: **A**. 현재 요청 계약을 유지하면서 반복 발생을 안정적으로 묶고 원문 사건은 보존할 수 있다.
+- A. Agent가 원본 리포트를 정규화·검색·비교하여 기존 Bug 연결, 신규 Bug 생성, 검토 대기를 결정한다.
+- B. Server가 고정 fingerprint를 계산하여 기존 Bug에 자동 연결한다.
+- C. 모든 리포트를 별도 Bug로 유지하고 Bug 단위 중복을 합치지 않는다.
+- 추천: **A**. 표현이 달라도 같은 현상일 수 있고 같은 오류 문자열도 다른 현상일 수 있으므로 의미 판단은
+  Agent에 두고, Server는 결정에 따른 관계만 원자적으로 반영한다.
 
 ## 결정 후 커밋 단위
 
@@ -134,7 +136,7 @@
 5. D5 매칭 결정 반영
 6. D6 분석 문맥·작업·결과
 7. D7 PCM 소유권 경계 정리
-8. D8 버그 수집·조회와 fingerprint
+8. D8 버그 수집·조회와 Agent grouping 결정
 9. 이슈 조회·통계와 전체 통합 테스트
 10. Result와 문서 정리
 

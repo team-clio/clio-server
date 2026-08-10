@@ -164,25 +164,20 @@ class AnalysisJobControllerTest {
 	private Fixture fixture() {
 		Project project = projectRepository.save(Project.create("Clio", null));
 		Instant occurredAt = Instant.parse("2026-08-10T00:00:00Z");
-		Bug bug = bugRepository.save(Bug.create(
+		JsonNode rawPayload = OBJECT_MAPPER.createObjectNode().put("status", 500);
+		BugOccurrence report = BugOccurrence.collect(
 				project,
-				"analysis-controller-fingerprint",
-				"source",
+				BugSource.API,
 				"Saved search fails",
 				"HTTP 500",
-				BugSource.API,
 				"IllegalStateException",
 				"saved search failed",
-				"SavedSearchService.run",
-				occurredAt
-		));
-		JsonNode rawPayload = OBJECT_MAPPER.createObjectNode().put("status", 500);
-		BugOccurrence report = occurrenceRepository.save(BugOccurrence.create(
-				bug,
-				BugSource.API,
+				java.util.List.of("SavedSearchService.run"),
 				rawPayload,
 				occurredAt
-		));
+		);
+		Bug bug = bugRepository.save(Bug.createFrom(report));
+		report = occurrenceRepository.save(report);
 		Issue issue = issueRepository.save(Issue.createFromBug(bug, BigDecimal.ONE));
 		issue.attach(bug, BigDecimal.ONE);
 		issueBugRepository.save(IssueBug.create(issue, bug, BigDecimal.ONE));
