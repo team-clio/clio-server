@@ -123,7 +123,8 @@
 
 ### 범위
 
-- 적용: 매칭 결정, 분석 결과, 분석 작업 상태, Context 동기화, Source 동기화 API
+- 적용: 매칭 결정, 분석 작업 생성·결과·상태 API
+- D7에서 PCM 관련 동기화 API가 Server 범위에서 제외되어 해당 operation type도 제거했다.
 - 비적용: 사용자용 Bug Report 수집 API
 - 다음 결정: D5 매칭 결정 적용 규칙
 
