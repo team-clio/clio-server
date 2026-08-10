@@ -42,6 +42,17 @@ public class Project {
 	@Column(nullable = false)
 	private Instant updatedAt;
 
+	public static Project create(String name, String description) {
+		if (name == null || name.isBlank()) {
+			throw new IllegalArgumentException("Project name must not be blank.");
+		}
+		Project project = new Project();
+		project.name = name.trim();
+		project.description = description;
+		project.status = ProjectStatus.ACTIVE;
+		return project;
+	}
+
 	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();
