@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface BugOccurrenceRepository extends JpaRepository<BugOccurrence, Long> {
 
 	Optional<BugOccurrence> findByIdAndBugIdAndBugProjectId(Long id, Long bugId, Long projectId);
+
+	Optional<BugOccurrence> findFirstByBugIdOrderByOccurredAtDesc(Long bugId);
 }
