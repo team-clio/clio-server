@@ -1,6 +1,8 @@
 package ax.clio.common.idempotency;
 
-public class IdempotencyConflictException extends RuntimeException {
+import ax.clio.common.ConflictException;
+
+public class IdempotencyConflictException extends ConflictException {
 
 	public IdempotencyConflictException(String message) {
 		super(message);

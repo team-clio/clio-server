@@ -2,6 +2,7 @@ package ax.clio.issue.entity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Objects;
 
 import ax.clio.bug.entity.Bug;
 import jakarta.persistence.Column;
@@ -25,7 +26,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
 		name = "issue_bugs",
-		uniqueConstraints = @UniqueConstraint(name = "uk_issue_bugs_issue_bug", columnNames = {"issue_id", "bug_id"})
+		uniqueConstraints = @UniqueConstraint(name = "uk_issue_bugs_bug", columnNames = "bug_id")
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class IssueBug {
@@ -50,6 +51,15 @@ public class IssueBug {
 
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
+
+	public static IssueBug create(Issue issue, Bug bug, BigDecimal confidence) {
+		IssueBug issueBug = new IssueBug();
+		issueBug.issue = Objects.requireNonNull(issue);
+		issueBug.bug = Objects.requireNonNull(bug);
+		issueBug.confidence = confidence;
+		issueBug.groupedBy = IssueGroupingMethod.LLM;
+		return issueBug;
+	}
 
 	@PrePersist
 	void prePersist() {

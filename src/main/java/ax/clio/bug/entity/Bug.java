@@ -1,6 +1,7 @@
 package ax.clio.bug.entity;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import ax.clio.project.entity.Project;
 import jakarta.persistence.Column;
@@ -90,6 +91,39 @@ public class Bug {
 
 	@Column(nullable = false)
 	private Instant updatedAt;
+
+	public static Bug create(
+			Project project,
+			String fingerprint,
+			String fingerprintSource,
+			String title,
+			String description,
+			BugSource source,
+			String errorType,
+			String normalizedMessage,
+			String topApplicationFrame,
+			Instant occurredAt
+	) {
+		Bug bug = new Bug();
+		bug.project = Objects.requireNonNull(project);
+		bug.fingerprint = Objects.requireNonNull(fingerprint);
+		bug.fingerprintSource = Objects.requireNonNull(fingerprintSource);
+		bug.title = Objects.requireNonNull(title);
+		bug.description = description;
+		bug.source = Objects.requireNonNull(source);
+		bug.errorType = errorType;
+		bug.normalizedMessage = normalizedMessage;
+		bug.topApplicationFrame = topApplicationFrame;
+		bug.occurrenceCount = 1;
+		bug.status = BugStatus.NEW;
+		bug.firstSeenAt = Objects.requireNonNull(occurredAt);
+		bug.lastSeenAt = occurredAt;
+		return bug;
+	}
+
+	public void markTriaged() {
+		this.status = BugStatus.TRIAGED;
+	}
 
 	@PrePersist
 	void prePersist() {
