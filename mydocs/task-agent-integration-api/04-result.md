@@ -40,6 +40,8 @@ PCM, 정규화, 검색과 분석 판단은 Agent에 남겨 Server가 Agent 내�
 
 관련 커밋: `9b9e948 feat: add Agent-owned Bug grouping`
 
+이 변경은 별도 저장소의 의존 작업이므로 Server PR과 함께 검토·병합해야 전체 흐름이 동작한다.
+
 ## 검증
 
 - Server 전체 Gradle 테스트: 27개 성공, 실패 0개
@@ -61,5 +63,3 @@ PCM, 정규화, 검색과 분석 판단은 Agent에 남겨 Server가 Agent 내�
 - Server가 Client 요청을 받아 Agent 실행을 시작하는 outbound orchestration은 별도 작업이다.
 - 운영 DB schema migration 작성과 기존 데이터 전환은 이번 범위에 포함하지 않았다.
 - 인증·인가, 운영 관측성, PostgreSQL 장애 복구 검증이 필요하다.
-
-후속 작업은 Server가 Client 요청을 받아 Agent 실행을 시작하는 outbound orchestration이다.
