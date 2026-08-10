@@ -53,8 +53,7 @@
 - 프로젝트 소속 오류, 계약 validation, 상태 전이, 멱등 재시도, 충돌을 검증한다.
 - H2 전체 테스트와 PostgreSQL용 매핑 컴파일을 확인한다.
 - `04-result.md`와 API 계약 문서를 갱신한다.
-- 프로젝트 초기화 때 삭제된 `mydocs/remaining-roadmap.md`를 현재 Server 책임에 맞게 복원하고,
-  "7. 추천 개발 순서"를 갱신한다.
+- 완료 범위와 남은 과제, 후속 작업을 `04-result.md`에 기록한다.
 
 ## 목표 API 계약
 
