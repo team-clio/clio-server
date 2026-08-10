@@ -2,7 +2,9 @@ package ax.clio.issue.entity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Objects;
 
+import ax.clio.bug.entity.Bug;
 import ax.clio.bug.entity.Priority;
 import ax.clio.bug.entity.Severity;
 import ax.clio.project.entity.Project;
@@ -81,6 +83,32 @@ public class Issue {
 
 	@Column(nullable = false)
 	private Instant updatedAt;
+
+	public static Issue createFromBug(Bug bug, BigDecimal confidence) {
+		Issue issue = new Issue();
+		issue.project = Objects.requireNonNull(bug).getProject();
+		issue.title = bug.getTitle();
+		issue.summary = bug.getDescription();
+		issue.status = IssueStatus.OPEN;
+		issue.severity = bug.getSeverity();
+		issue.aiConfidence = confidence;
+		issue.firstSeenAt = bug.getFirstSeenAt();
+		issue.lastSeenAt = bug.getLastSeenAt();
+		return issue;
+	}
+
+	public void attach(Bug bug, BigDecimal confidence) {
+		Objects.requireNonNull(bug);
+		this.bugCount += 1;
+		this.occurrenceCount += bug.getOccurrenceCount();
+		this.aiConfidence = confidence;
+		if (this.firstSeenAt == null || bug.getFirstSeenAt().isBefore(this.firstSeenAt)) {
+			this.firstSeenAt = bug.getFirstSeenAt();
+		}
+		if (this.lastSeenAt == null || bug.getLastSeenAt().isAfter(this.lastSeenAt)) {
+			this.lastSeenAt = bug.getLastSeenAt();
+		}
+	}
 
 	@PrePersist
 	void prePersist() {

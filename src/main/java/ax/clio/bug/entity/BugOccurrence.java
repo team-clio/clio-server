@@ -1,6 +1,7 @@
 package ax.clio.bug.entity;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.Column;
@@ -48,6 +49,20 @@ public class BugOccurrence {
 
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
+
+	public static BugOccurrence create(
+			Bug bug,
+			BugSource source,
+			JsonNode rawPayload,
+			Instant occurredAt
+	) {
+		BugOccurrence occurrence = new BugOccurrence();
+		occurrence.bug = Objects.requireNonNull(bug);
+		occurrence.source = Objects.requireNonNull(source);
+		occurrence.rawPayload = rawPayload == null ? null : rawPayload.deepCopy();
+		occurrence.occurredAt = Objects.requireNonNull(occurredAt);
+		return occurrence;
+	}
 
 	@PrePersist
 	void prePersist() {
