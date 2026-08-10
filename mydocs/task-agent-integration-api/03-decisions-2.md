@@ -32,3 +32,37 @@
 - 변경: `GET .../issues/{issueId}/analysis-context` → `GET .../analysis-jobs/{jobId}/context`
 - 필요한 Agent 연동 API는 총 9개가 된다.
 - 다음 결정: D7 동기화 revision 모델
+
+## D7. PCM과 Server의 소유권 경계
+
+- 결정일: 2026-08-10
+- 상태: 확정·반영 완료
+- 선택: **A — Server는 PCM을 알지 않고 Client와 Agent를 연결**
+
+### 적용 방식
+
+- PCM revision, Knowledge commit, Repository snapshot과 검색 인덱스는 Agent가 전부 소유한다.
+- Agent는 분석 시작 시 자기 저장소에서 PCM revision과 Repository commit을 직접 고정한다.
+- Server의 `ProjectContext`와 `ProjectSource`에 PCM 필드를 추가하지 않는다.
+- PCM 동기화 결과를 Server에 복제하는 두 API를 구현 대상에서 제외한다.
+- Agent PCM snapshot을 Server가 다시 제공하는 조회 API도 구현 대상에서 제외한다.
+- Server에는 Client 요청 식별자와 매칭·분석 같은 업무 결과만 저장한다.
+
+### 제외한 API
+
+- `PUT .../contexts/{contextId}/sync-result`
+- `PUT .../sources/{sourceId}/sync-result`
+- `GET .../agent-context-snapshot`
+
+### 결정 근거
+
+- 제공된 PCM 설계와 현재 Agent 구현 모두 PCM을 Agent 내부 service layer로 정의한다.
+- 같은 revision과 commit을 Server에도 저장하면 두 저장소의 최신값이 어긋날 수 있다.
+- Server가 PCM schema를 알면 Agent 내부 변경이 Server API와 DB 변경으로 전파된다.
+- Client는 Server를 통해 요청하고, PCM 처리 결과는 Agent 응답으로 전달받으면 된다.
+
+### 영향
+
+- 필요한 Agent 연동 API는 9개에서 6개로 줄어든다.
+- 미사용 `CONTEXT_SYNC_RESULT`, `SOURCE_SYNC_RESULT` operation type을 제거한다.
+- 다음 결정: D8 버그 수집 시 동일 Bug 판정

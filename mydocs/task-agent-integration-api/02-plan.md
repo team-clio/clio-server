@@ -3,7 +3,7 @@
 ## 독자와 목적
 
 - 예상 독자: Clio Server·Agent Graph 구현자와 API 리뷰어
-- 목적: 9개 연동 API와 의존 API의 구현 순서, 경계, 결정할 사항을 합의한다.
+- 목적: 6개 연동 API와 의존 API의 구현 순서, 경계, 결정할 사항을 합의한다.
 - 기준 계약: `clio-agent-graph`의 `normalization`, `matching`, `analysis`, `pcm` 공개 모델
 
 ## 구현 단계
@@ -16,7 +16,7 @@
 
 ### S2. API 계약과 공통 기반
 
-- 9개 API의 요청·응답 DTO, enum, validation을 정의한다.
+- 6개 API의 요청·응답 DTO, enum, validation을 정의한다.
 - Agent 연동 DTO만 `snake_case` JSON을 사용하고 기존 사용자 API 형식은 유지하는 방안을 검토한다(D2).
 - 404·409·422 등 공통 오류 응답과 `@RestControllerAdvice`를 구현한다.
 - 프로젝트 소속 검증과 멱등 처리 기반을 구현한다(D4).
@@ -31,14 +31,14 @@
 ### S4. 분석 작업과 결과
 
 - `AnalysisJob`, `AnalysisResult` Repository와 Service를 추가한다.
-- 분석 문맥 조회에서 최대 5개 Bug와 최신 정규화 스냅샷을 반환한다.
+- 분석 문맥 조회에서 최대 5개 Bug 식별자와 이전 분석 스냅샷을 반환한다.
 - 작업 상태 전이와 완전한 `IssueAnalysis` 결과 스냅샷 저장을 구현한다(D6).
 
-### S5. 컨텍스트·소스 동기화
+### S5. PCM 소유권 경계 확인
 
-- `ProjectContext`, `ProjectSource` Repository와 동기화 필드를 추가한다.
-- 문서 source revision, PCM revision, commit ID, Repository active commit을 반영한다(D7).
-- 프로젝트 단위 PCM·Repository revision snapshot을 조회한다.
+- PCM revision·commit·검색 snapshot은 Agent 내부 계약으로 유지한다(D7).
+- Server에는 PCM 필드나 동기화 결과 API를 추가하지 않는다.
+- Client 요청 전달과 Agent 업무 결과 저장에 필요한 식별자만 Server 계약에 둔다.
 
 ### S6. 의존 이슈 조회 API
 
@@ -58,15 +58,12 @@
 
 | API | 정상 응답 | 핵심 동작 |
 |---|---:|---|
-| `POST .../bugs/{bugId}/match-decisions` | 200/201 | 정규화 결과 저장 후 매칭 결정 적용 |
+| `POST .../bugs/{bugId}/match-decisions` | 200/201 | 매칭 결정 기록 및 Issue 연결 적용 |
 | `POST .../issues/{issueId}/analysis-jobs` | 201 | 최초 분석·재분석 작업 생성 |
 | `PUT .../analysis-jobs/{jobId}/result` | 200/201 | 완전한 분석 snapshot 저장 |
 | `PATCH .../analysis-jobs/{jobId}` | 200 | 작업 상태 전이 |
-| `PUT .../contexts/{contextId}/sync-result` | 200 | 문서·PCM revision 반영 |
-| `PUT .../sources/{sourceId}/sync-result` | 200 | active commit·PCM revision 반영 |
 | `GET .../bug-reports/{reportId}` | 200 | Agent NM 입력과 원문 payload 반환 |
 | `GET .../analysis-jobs/{jobId}/context` | 200 | IA 입력 문맥과 이전 분석 반환 |
-| `GET .../agent-context-snapshot` | 200 | PCM revision과 Repository commit map 반환 |
 
 `reportId`는 한 번의 수집 사건인 `BugOccurrence.id`, `bugId`는 중복 발생을 묶는 `Bug.id`로
 구분하는 것을 기본안으로 한다. 상세 필드 이름은 D2에서 확정한다.
@@ -113,12 +110,12 @@
 - B. PATCH에서 모든 상태 전이를 허용하고 결과 저장과 완료를 분리한다.
 - 추천: **A**. 결과 없는 완료 상태와 완료됐지만 결과가 없는 중간 실패를 방지한다.
 
-### D7. 동기화 revision 모델
+### D7. PCM과 Server의 소유권 경계
 
-- A. Server에는 참조용 최신 상태만 저장한다. Context는 source/PCM revision·commit ID,
-  Source는 active commit·PCM revision을 가지며 Agent의 상세 지식 이력은 Agent DB가 소유한다.
+- A. Server는 PCM을 알지 않는다. PCM revision·commit·snapshot은 Agent가 전부 소유하고,
+  Server는 Client 요청과 Agent 업무 결과를 연결한다.
 - B. Agent의 PCM commit·knowledge 변경 이력 전체를 Server에도 복제한다.
-- 추천: **A**. Server와 Agent의 데이터 소유권을 분리하면서 분석 snapshot 구성에 필요한 값은 제공한다.
+- 추천: **A**. PCM snapshot은 Agent가 이미 실행 시작 시 직접 고정하므로 Server에 복제할 이유가 없다.
 
 ### D8. 버그 수집 시 동일 Bug 판정
 
@@ -136,7 +133,7 @@
 4. D4 공통 멱등 처리 기반
 5. D5 매칭 결정 반영
 6. D6 분석 문맥·작업·결과
-7. D7 컨텍스트·소스 동기화
+7. D7 PCM 소유권 경계 정리
 8. D8 버그 수집·조회와 fingerprint
 9. 이슈 조회·통계와 전체 통합 테스트
 10. Result와 문서 정리
