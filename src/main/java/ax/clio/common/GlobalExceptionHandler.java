@@ -4,11 +4,14 @@ import java.time.Instant;
 
 import ax.clio.common.dto.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -39,6 +42,24 @@ public class GlobalExceptionHandler {
 				.map(error -> error.getDefaultMessage())
 				.orElse("Request validation failed.");
 		return response(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message, request);
+	}
+
+	@ExceptionHandler({
+			IllegalArgumentException.class,
+			ConstraintViolationException.class,
+			MethodArgumentTypeMismatchException.class,
+			HttpMessageNotReadableException.class
+	})
+	public ResponseEntity<ApiErrorResponse> handleBadRequest(
+			Exception exception,
+			HttpServletRequest request
+	) {
+		return response(
+				HttpStatus.BAD_REQUEST,
+				"INVALID_REQUEST",
+				exception.getMessage(),
+				request
+		);
 	}
 
 	private ResponseEntity<ApiErrorResponse> response(

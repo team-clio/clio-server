@@ -13,21 +13,44 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import ax.clio.bug.dto.AgentBugReportResponse;
 import ax.clio.bug.dto.BugReportCollectRequest;
 import ax.clio.bug.dto.BugReportResponse;
 import ax.clio.bug.dto.BugReportSummaryResponse;
 import ax.clio.common.dto.PageResponse;
+import ax.clio.bug.entity.BugSource;
+import ax.clio.bug.entity.BugStatus;
+import ax.clio.bug.entity.Severity;
+import ax.clio.bug.service.BugReportService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 
 @RestController
 @RequestMapping("/api/v1/projects/{projectId}/bug-reports")
+@RequiredArgsConstructor
+@Validated
 public class BugReportController {
+
+	private final BugReportService bugReportService;
 
 	@PostMapping
 	public ResponseEntity<BugReportResponse> collectBugReport(
 			@PathVariable Long projectId,
-			@RequestBody BugReportCollectRequest request
+			@Valid @RequestBody BugReportCollectRequest request
 	) {
-		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(bugReportService.collect(projectId, request));
+	}
+
+	@GetMapping("/{reportId}")
+	public AgentBugReportResponse getBugReport(
+			@PathVariable Long projectId,
+			@PathVariable Long reportId
+	) {
+		return bugReportService.getForAgent(projectId, reportId);
 	}
 
 	@GetMapping
@@ -36,12 +59,22 @@ public class BugReportController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
 			@RequestParam(required = false) Long issueId,
-			@RequestParam(required = false) String source,
-			@RequestParam(required = false) String status,
-			@RequestParam(required = false) String severity,
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "20") int size
+			@RequestParam(required = false) BugSource source,
+			@RequestParam(required = false) BugStatus status,
+			@RequestParam(required = false) Severity severity,
+			@RequestParam(defaultValue = "0") @Min(0) int page,
+			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
 	) {
-		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+		return ResponseEntity.ok(bugReportService.search(
+				projectId,
+				from,
+				to,
+				issueId,
+				source,
+				status,
+				severity,
+				page,
+				size
+		));
 	}
 }

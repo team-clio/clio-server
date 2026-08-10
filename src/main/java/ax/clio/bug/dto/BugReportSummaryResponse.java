@@ -5,6 +5,7 @@ import java.time.Instant;
 public record BugReportSummaryResponse(
 		Long id,
 		Long projectId,
+		Long bugId,
 		Long issueId,
 		String title,
 		String source,

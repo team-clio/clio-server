@@ -110,6 +110,18 @@ public class Issue {
 		}
 	}
 
+	public void recordOccurrence(Bug bug, Instant occurredAt) {
+		Objects.requireNonNull(bug);
+		Objects.requireNonNull(occurredAt);
+		this.occurrenceCount += 1;
+		if (this.firstSeenAt == null || occurredAt.isBefore(this.firstSeenAt)) {
+			this.firstSeenAt = occurredAt;
+		}
+		if (this.lastSeenAt == null || occurredAt.isAfter(this.lastSeenAt)) {
+			this.lastSeenAt = occurredAt;
+		}
+	}
+
 	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();

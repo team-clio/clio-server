@@ -61,24 +61,19 @@ class BugMatchDecisionControllerTest {
 	void acceptsSnakeCaseAndReplaysSameRequest() throws Exception {
 		Project project = projectRepository.save(Project.create("Clio", null));
 		Instant occurredAt = Instant.parse("2026-08-10T00:00:00Z");
-		Bug bug = bugRepository.save(Bug.create(
+		BugOccurrence report = BugOccurrence.collect(
 				project,
-				"controller-fingerprint",
-				"source",
+				BugSource.API,
 				"Saved search fails",
 				"HTTP 500",
-				BugSource.API,
 				"IllegalStateException",
 				"saved search failed",
-				"SavedSearchService.run",
-				occurredAt
-		));
-		BugOccurrence report = occurrenceRepository.save(BugOccurrence.create(
-				bug,
-				BugSource.API,
+				java.util.List.of("SavedSearchService.run"),
 				OBJECT_MAPPER.createObjectNode(),
 				occurredAt
-		));
+		);
+		Bug bug = bugRepository.save(Bug.createFrom(report));
+		report = occurrenceRepository.save(report);
 		Issue issue = issueRepository.save(Issue.createFromBug(bug, BigDecimal.ONE));
 		String body = requestBody("REQ-CONTROLLER", bug.getId(), report.getId(), issue.getId());
 		String endpoint = "/api/v1/projects/%d/bugs/%d/match-decisions"

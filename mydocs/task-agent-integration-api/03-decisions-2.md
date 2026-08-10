@@ -66,3 +66,33 @@
 - 필요한 Agent 연동 API는 9개에서 6개로 줄어든다.
 - 미사용 `CONTEXT_SYNC_RESULT`, `SOURCE_SYNC_RESULT` operation type을 제거한다.
 - 다음 결정: D8 버그 수집 시 동일 Bug 판정
+
+## D8. 동일 Bug 판단 소유권
+
+- 결정일: 2026-08-10
+- 상태: 확정·반영 완료
+- 선택: **Agent가 동일 Bug 여부를 판단하고 Server가 결과를 반영**
+
+### 적용 방식
+
+- 원본 BugReport는 의미 기반 grouping 전에 독립된 발생 사건으로 저장한다.
+- Agent는 정규화 결과와 기존 Bug 후보를 비교해 `MATCH_EXISTING`, `CREATE_NEW`, `REVIEW`를 반환한다.
+- `MATCH_EXISTING`은 `matched_bug_id`를 필수로 포함한다.
+- Server는 Agent 결정에 따라 발생 사건을 기존 Bug에 붙이거나 새 Bug를 만든다.
+- `REVIEW`는 판단 기록만 남기며 Bug 관계를 변경하지 않는다.
+- Bug가 확정된 뒤 기존 MatchDecision 흐름이 Bug를 Issue에 연결한다.
+- 기존 Bug가 이미 Issue에 연결돼 있으면 그 Issue ID를 반환하고 Issue 매칭을 다시 실행하지 않는다.
+- Server의 fingerprint와 fingerprint 기반 고유 제약은 제거한다.
+
+### 결정 근거
+
+- 문자열 fingerprint는 표현이 다른 동일 현상을 나누고, 문자열이 같은 다른 현상을 합칠 수 있다.
+- Bug 동일성과 Issue root cause 동일성은 서로 다른 판단이므로 두 단계로 유지한다.
+- Agent는 정규화 snapshot과 검색 후보를 보유하고 있어 의미 비교를 수행할 수 있다.
+- DB 관계 변경은 Server 트랜잭션으로 제한해 Agent가 업무 테이블을 직접 수정하지 않게 한다.
+
+### 계약 영향
+
+- 추가: `POST .../bug-reports/{reportId}/grouping-decisions`
+- 필요한 Agent 연동 API는 6개에서 7개로 변경된다.
+- Agent의 기존 `Bug → Issue` 계약 앞에 `BugReport → Bug` 계약을 추가한다.
