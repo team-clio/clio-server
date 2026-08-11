@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import ax.clio.bug.dto.AgentBugReportResponse;
 import ax.clio.bug.dto.BugReportCollectRequest;
 import ax.clio.bug.dto.BugReportResponse;
 import ax.clio.bug.dto.BugReportSummaryResponse;
@@ -43,14 +42,6 @@ public class BugReportController {
 	) {
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(bugReportService.collect(projectId, request));
-	}
-
-	@GetMapping("/{reportId}")
-	public AgentBugReportResponse getBugReport(
-			@PathVariable Long projectId,
-			@PathVariable Long reportId
-	) {
-		return bugReportService.getForAgent(projectId, reportId);
 	}
 
 	@GetMapping

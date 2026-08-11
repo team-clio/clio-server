@@ -47,6 +47,8 @@ class BugReportGroupingControllerTest {
 	void collectsRawReportThenAppliesAgentCreateDecisionIdempotently() throws Exception {
 		Project project = projectRepository.save(Project.create("Clio", null));
 		String reportsEndpoint = "/api/v1/projects/%d/bug-reports".formatted(project.getId());
+		String internalReportsEndpoint = "/internal/api/v1/projects/%d/bug-reports"
+				.formatted(project.getId());
 		String collectBody = """
 				{
 				  "title": "Saved search fails",
@@ -70,13 +72,16 @@ class BugReportGroupingControllerTest {
 		long reportId = OBJECT_MAPPER.readTree(collected).get("id").asLong();
 
 		mockMvc.perform(get(reportsEndpoint + "/" + reportId))
+				.andExpect(status().isNotFound());
+
+		mockMvc.perform(get(internalReportsEndpoint + "/" + reportId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.bug_report_id").value(reportId))
 				.andExpect(jsonPath("$.error_type").value("IllegalStateException"))
 				.andExpect(jsonPath("$.stack_trace[0]").value("SavedSearchService.run"))
 				.andExpect(jsonPath("$.raw_payload.status").value(500));
 
-		String groupingEndpoint = reportsEndpoint + "/" + reportId + "/grouping-decisions";
+		String groupingEndpoint = internalReportsEndpoint + "/" + reportId + "/grouping-decisions";
 		String groupingBody = """
 				{
 				  "request_id": "REQ-GROUP-HTTP",

@@ -36,6 +36,7 @@ class AgentIntegrationLifecycleTest {
 	void completesReportToIssueAnalysisLifecycle() throws Exception {
 		Project project = projectRepository.save(Project.create("Clio", null));
 		String projectPath = "/api/v1/projects/" + project.getId();
+		String internalProjectPath = "/internal/api/v1/projects/" + project.getId();
 
 		JsonNode collected = json(mockMvc.perform(post(projectPath + "/bug-reports")
 						.contentType(MediaType.APPLICATION_JSON)
@@ -54,12 +55,12 @@ class AgentIntegrationLifecycleTest {
 				.andReturn().getResponse().getContentAsString());
 		long reportId = collected.get("id").asLong();
 
-		mockMvc.perform(get(projectPath + "/bug-reports/" + reportId))
+		mockMvc.perform(get(internalProjectPath + "/bug-reports/" + reportId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.bug_report_id").value(reportId));
 
 		JsonNode grouped = json(mockMvc.perform(post(
-						projectPath + "/bug-reports/" + reportId + "/grouping-decisions"
+						internalProjectPath + "/bug-reports/" + reportId + "/grouping-decisions"
 				)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
@@ -77,7 +78,7 @@ class AgentIntegrationLifecycleTest {
 		long bugId = grouped.get("resulting_bug_id").asLong();
 
 		JsonNode matched = json(mockMvc.perform(post(
-						projectPath + "/bugs/" + bugId + "/match-decisions"
+						internalProjectPath + "/bugs/" + bugId + "/match-decisions"
 				)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
@@ -96,7 +97,7 @@ class AgentIntegrationLifecycleTest {
 		long issueId = matched.get("resulting_issue_id").asLong();
 
 		JsonNode createdJob = json(mockMvc.perform(post(
-						projectPath + "/issues/" + issueId + "/analysis-jobs"
+						internalProjectPath + "/issues/" + issueId + "/analysis-jobs"
 				)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
@@ -108,7 +109,7 @@ class AgentIntegrationLifecycleTest {
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString());
 		long jobId = createdJob.get("analysis_job_id").asLong();
-		String jobPath = projectPath + "/analysis-jobs/" + jobId;
+		String jobPath = internalProjectPath + "/analysis-jobs/" + jobId;
 
 		mockMvc.perform(get(jobPath + "/context"))
 				.andExpect(status().isOk())

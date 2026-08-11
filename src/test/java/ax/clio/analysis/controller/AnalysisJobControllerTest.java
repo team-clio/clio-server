@@ -69,7 +69,7 @@ class AnalysisJobControllerTest {
 	@Test
 	void supportsSnakeCaseLifecycleAndIdempotentCreateReplay() throws Exception {
 		Fixture fixture = fixture();
-		String createEndpoint = "/api/v1/projects/%d/issues/%d/analysis-jobs"
+		String createEndpoint = "/internal/api/v1/projects/%d/issues/%d/analysis-jobs"
 				.formatted(fixture.project().getId(), fixture.issue().getId());
 		String createBody = """
 				{
@@ -97,7 +97,7 @@ class AnalysisJobControllerTest {
 				.andExpect(jsonPath("$.analysis_job_id").value(jobId));
 		assertThat(jobRepository.count()).isEqualTo(1);
 
-		String jobEndpoint = "/api/v1/projects/%d/analysis-jobs/%d"
+		String jobEndpoint = "/internal/api/v1/projects/%d/analysis-jobs/%d"
 				.formatted(fixture.project().getId(), jobId);
 		mockMvc.perform(get(jobEndpoint + "/context"))
 				.andExpect(status().isOk())
@@ -147,7 +147,7 @@ class AnalysisJobControllerTest {
 	@Test
 	void rejectsCamelCaseAgentRequest() throws Exception {
 		Fixture fixture = fixture();
-		String endpoint = "/api/v1/projects/%d/issues/%d/analysis-jobs"
+		String endpoint = "/internal/api/v1/projects/%d/issues/%d/analysis-jobs"
 				.formatted(fixture.project().getId(), fixture.issue().getId());
 
 		mockMvc.perform(post(endpoint)

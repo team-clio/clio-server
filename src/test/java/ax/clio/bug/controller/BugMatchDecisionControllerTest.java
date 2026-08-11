@@ -76,7 +76,7 @@ class BugMatchDecisionControllerTest {
 		report = occurrenceRepository.save(report);
 		Issue issue = issueRepository.save(Issue.createFromBug(bug, BigDecimal.ONE));
 		String body = requestBody("REQ-CONTROLLER", bug.getId(), report.getId(), issue.getId());
-		String endpoint = "/api/v1/projects/%d/bugs/%d/match-decisions"
+		String endpoint = "/internal/api/v1/projects/%d/bugs/%d/match-decisions"
 				.formatted(project.getId(), bug.getId());
 
 		mockMvc.perform(post(endpoint).contentType(MediaType.APPLICATION_JSON).content(body))

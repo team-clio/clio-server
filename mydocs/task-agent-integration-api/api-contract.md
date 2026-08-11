@@ -3,6 +3,7 @@
 ## 목적과 경계
 
 - 독자: Clio Server·Agent Graph 연동 구현자
+- 모든 계약은 외부 사용자 API와 분리된 `/internal/api/v1` namespace를 사용한다.
 - Java 내부 필드는 camelCase, Agent와 주고받는 JSON은 snake_case다.
 - ID는 양수 JSON number, `request_id`는 프로젝트·operation별 멱등 키다.
 - Server는 업무 데이터와 Agent 결정을 저장한다.
@@ -25,7 +26,7 @@ Agent → Server: IssueAnalysis 결과 저장
 
 ## 1. 원본 BugReport 조회
 
-`GET /api/v1/projects/{projectId}/bug-reports/{reportId}`
+`GET /internal/api/v1/projects/{projectId}/bug-reports/{reportId}`
 
 ```json
 {
@@ -43,7 +44,7 @@ Agent → Server: IssueAnalysis 결과 저장
 
 ## 2. Bug grouping 결정 반영
 
-`POST /api/v1/projects/{projectId}/bug-reports/{reportId}/grouping-decisions`
+`POST /internal/api/v1/projects/{projectId}/bug-reports/{reportId}/grouping-decisions`
 
 ```json
 {
@@ -68,7 +69,7 @@ Agent → Server: IssueAnalysis 결과 저장
 
 ## 3. Issue 매칭 결정 반영
 
-`POST /api/v1/projects/{projectId}/bugs/{bugId}/match-decisions`
+`POST /internal/api/v1/projects/{projectId}/bugs/{bugId}/match-decisions`
 
 ```json
 {
@@ -93,7 +94,7 @@ Agent → Server: IssueAnalysis 결과 저장
 
 ## 4. 분석 작업 생성
 
-`POST /api/v1/projects/{projectId}/issues/{issueId}/analysis-jobs`
+`POST /internal/api/v1/projects/{projectId}/issues/{issueId}/analysis-jobs`
 
 ```json
 {
@@ -107,7 +108,7 @@ Agent → Server: IssueAnalysis 결과 저장
 
 ## 5. 분석 작업 상태 변경
 
-`PATCH /api/v1/projects/{projectId}/analysis-jobs/{jobId}`
+`PATCH /internal/api/v1/projects/{projectId}/analysis-jobs/{jobId}`
 
 ```json
 {"request_id": "REQ-START-1", "status": "RUNNING"}
@@ -123,7 +124,7 @@ Agent → Server: IssueAnalysis 결과 저장
 
 ## 6. 분석 context 조회
 
-`GET /api/v1/projects/{projectId}/analysis-jobs/{jobId}/context`
+`GET /internal/api/v1/projects/{projectId}/analysis-jobs/{jobId}/context`
 
 - Issue와 trigger Bug를 반환한다.
 - 대표 Bug는 최대 5개이며 Agent가 자기 active NormalizedReport와 결합한다.
@@ -131,7 +132,7 @@ Agent → Server: IssueAnalysis 결과 저장
 
 ## 7. 분석 결과 저장
 
-`PUT /api/v1/projects/{projectId}/analysis-jobs/{jobId}/result`
+`PUT /internal/api/v1/projects/{projectId}/analysis-jobs/{jobId}/result`
 
 ```json
 {

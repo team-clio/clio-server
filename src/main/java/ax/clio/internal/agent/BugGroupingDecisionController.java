@@ -1,4 +1,4 @@
-package ax.clio.bug.controller;
+package ax.clio.internal.agent;
 
 import ax.clio.bug.dto.ApplyBugGroupingDecisionRequest;
 import ax.clio.bug.dto.BugGroupingDecisionResponse;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/projects/{projectId}/bug-reports/{reportId}/grouping-decisions")
+@RequestMapping("/internal/api/v1/projects/{projectId}/bug-reports/{reportId}/grouping-decisions")
 @RequiredArgsConstructor
 public class BugGroupingDecisionController {
 

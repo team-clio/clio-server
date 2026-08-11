@@ -1,4 +1,4 @@
-package ax.clio.analysis.controller;
+package ax.clio.internal.agent;
 
 import ax.clio.analysis.dto.AnalysisJobContextResponse;
 import ax.clio.analysis.dto.AnalysisJobResponse;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/projects/{projectId}")
+@RequestMapping("/internal/api/v1/projects/{projectId}")
 @RequiredArgsConstructor
 public class AnalysisJobController {
 

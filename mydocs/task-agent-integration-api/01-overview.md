@@ -31,23 +31,23 @@
 
 ### Agent 결과 반영 API
 
-1. `POST /api/v1/projects/{projectId}/bug-reports/{reportId}/grouping-decisions`
+1. `POST /internal/api/v1/projects/{projectId}/bug-reports/{reportId}/grouping-decisions`
    - Agent의 기존 Bug 연결·신규 Bug 생성·검토 대기 결정을 멱등 반영
-2. `POST /api/v1/projects/{projectId}/bugs/{bugId}/match-decisions`
+2. `POST /internal/api/v1/projects/{projectId}/bugs/{bugId}/match-decisions`
    - Agent의 Issue 매칭 결정을 멱등 반영
    - 기존 이슈 연결, 검토 대기, 새 이슈 생성 결과 처리
-3. `POST /api/v1/projects/{projectId}/issues/{issueId}/analysis-jobs`
+3. `POST /internal/api/v1/projects/{projectId}/issues/{issueId}/analysis-jobs`
    - 최초 분석 또는 재분석을 위한 분석 작업 생성
-4. `PUT /api/v1/projects/{projectId}/analysis-jobs/{jobId}/result`
+4. `PUT /internal/api/v1/projects/{projectId}/analysis-jobs/{jobId}/result`
    - 구조화된 분석 결과를 멱등 저장
-5. `PATCH /api/v1/projects/{projectId}/analysis-jobs/{jobId}`
+5. `PATCH /internal/api/v1/projects/{projectId}/analysis-jobs/{jobId}`
    - 분석 작업의 실행 상태·실패 사유 갱신
 
 ### Agent 입력 조회 API
 
-6. `GET /api/v1/projects/{projectId}/bug-reports/{reportId}`
+6. `GET /internal/api/v1/projects/{projectId}/bug-reports/{reportId}`
    - 원문 payload를 포함한 단일 버그 리포트 조회
-7. `GET /api/v1/projects/{projectId}/analysis-jobs/{jobId}/context`
+7. `GET /internal/api/v1/projects/{projectId}/analysis-jobs/{jobId}/context`
    - 분석 실행에 필요한 이슈·대표 버그 식별자·이전 분석 스냅샷 조회
 
 ## 함께 구현할 기반 기능

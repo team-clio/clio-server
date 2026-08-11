@@ -82,3 +82,6 @@ Server → Agent: 실행에 필요한 식별자와 원본
 Agent → Server: Bug grouping, Issue matching, 분석 결과
 Agent 내부: 정규화, 검색, PCM, Repository snapshot
 ```
+
+Agent Graph가 Server를 호출하는 7개 연동 API는 `/internal/api/v1` 아래에만 노출한다.
+사용자용 `/api/v1`에는 Agent 원본 조회·결정 반영·분석 작업 API를 노출하지 않는다.
