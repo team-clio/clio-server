@@ -1,5 +1,6 @@
 package ax.clio.project.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import ax.clio.project.entity.Project;
@@ -10,6 +11,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProjectRepository extends JpaRepository<Project, Long> {
+
+	List<Project> findAllByOrderByNameAsc();
+
+	boolean existsByNormalizedName(String normalizedName);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select project from Project project where project.id = :projectId")
