@@ -60,4 +60,17 @@ class ProjectControllerTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
 	}
+
+	@Test
+	void rejectsDuplicateProjectNameIgnoringCaseAndWhitespace() throws Exception {
+		projectRepository.save(Project.create("Clio Admin", null));
+
+		mockMvc.perform(post("/api/v1/projects")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{"name":"  clio admin  "}
+							"""))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("CONFLICT"));
+	}
 }

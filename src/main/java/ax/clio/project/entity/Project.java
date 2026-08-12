@@ -1,6 +1,7 @@
 package ax.clio.project.entity;
 
 import java.time.Instant;
+import java.util.Locale;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,6 +30,9 @@ public class Project {
 	@Column(nullable = false, length = 120)
 	private String name;
 
+	@Column(nullable = false, unique = true, length = 120)
+	private String normalizedName;
+
 	@Column(length = 1000)
 	private String description;
 
@@ -48,9 +52,14 @@ public class Project {
 		}
 		Project project = new Project();
 		project.name = name.trim();
+		project.normalizedName = normalizeName(name);
 		project.description = description;
 		project.status = ProjectStatus.ACTIVE;
 		return project;
+	}
+
+	public static String normalizeName(String name) {
+		return name.trim().toLowerCase(Locale.ROOT);
 	}
 
 	@PrePersist

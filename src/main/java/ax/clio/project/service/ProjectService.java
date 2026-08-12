@@ -2,11 +2,13 @@ package ax.clio.project.service;
 
 import java.util.List;
 
+import ax.clio.common.ConflictException;
 import ax.clio.project.dto.CreateProjectRequest;
 import ax.clio.project.dto.ProjectResponse;
 import ax.clio.project.entity.Project;
 import ax.clio.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +27,14 @@ public class ProjectService {
 
 	@Transactional
 	public ProjectResponse createProject(CreateProjectRequest request) {
+		if (projectRepository.existsByNormalizedName(Project.normalizeName(request.name()))) {
+			throw new ConflictException("Project name already exists.");
+		}
 		Project project = Project.create(request.name(), request.description());
-		return ProjectResponse.from(projectRepository.save(project));
+		try {
+			return ProjectResponse.from(projectRepository.saveAndFlush(project));
+		} catch (DataIntegrityViolationException exception) {
+			throw new ConflictException("Project name already exists.");
+		}
 	}
 }
