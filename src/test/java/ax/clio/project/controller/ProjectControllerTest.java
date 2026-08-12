@@ -28,7 +28,7 @@ class ProjectControllerTest {
 
 	@Test
 	void createsProjectAndReturnsProjectList() throws Exception {
-		projectRepository.save(Project.create("Existing", "Existing project"));
+		projectRepository.save(Project.create("Zulu", "Existing project"));
 
 		mockMvc.perform(post("/api/v1/projects")
 					.contentType(MediaType.APPLICATION_JSON)
@@ -45,7 +45,9 @@ class ProjectControllerTest {
 
 		mockMvc.perform(get("/api/v1/projects"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.items.length()").value(2));
+				.andExpect(jsonPath("$.items.length()").value(2))
+				.andExpect(jsonPath("$.items[0].name").value("Clio Admin"))
+				.andExpect(jsonPath("$.items[1].name").value("Zulu"));
 	}
 
 	@Test
