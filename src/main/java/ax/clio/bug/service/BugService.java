@@ -3,6 +3,7 @@ package ax.clio.bug.service;
 import java.time.Instant;
 import java.util.ArrayList;
 
+import ax.clio.agent.event.BugCollectedEvent;
 import ax.clio.bug.dto.AgentBugResponse;
 import ax.clio.bug.dto.BugCollectRequest;
 import ax.clio.bug.dto.BugResponse;
@@ -21,6 +22,7 @@ import ax.clio.project.entity.Project;
 import ax.clio.project.repository.ProjectRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -40,6 +42,7 @@ public class BugService {
 	private final BugRepository bugRepository;
 	private final IssueBugRepository issueBugRepository;
 	private final ObjectMapper objectMapper;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public BugResponse collect(Long projectId, BugCollectRequest request) {
@@ -56,6 +59,7 @@ public class BugService {
 				persistenceTree(request.rawPayload()),
 				request.occurredAt()
 		));
+		eventPublisher.publishEvent(new BugCollectedEvent(projectId, bug.getId()));
 		return response(bug);
 	}
 

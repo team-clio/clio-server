@@ -50,6 +50,25 @@ Spring 통합 API가 아니다. 최상위 `clio_agent`가 요청을 라우팅하
 Normalizer·Hybrid Retrieval·Matcher를, Issue Analysis는 실제
 `issue_analyzer`/`issue_reanalyzer`를 호출한다.
 
+### MVP Bug 처리 호출
+
+Bug 수집 트랜잭션이 커밋되면 Spring은 LangGraph Server의 stateless run API에
+최상위 `clio_agent` 실행을 요청한다.
+
+```text
+Client → Spring Bug 생성·commit
+       → Spring → Agent POST /runs
+                    assistant_id: clio_agent
+                    request_type: process_report
+                    payload: bug_id
+       → Agent → Spring internal API
+```
+
+Spring은 분석 완료를 기다리지 않고 Agent Server가 run을 접수하면 Bug 수집 요청을
+종료한다. `CLIO_AGENT_URL`의 기본값은 `http://localhost:2024`이며
+`CLIO_AGENT_ENABLED=false`로 호출을 끌 수 있다. MVP에서는 dispatch 실패를 로그로만
+남기며 자동 재시도와 별도 작업 queue는 두지 않는다.
+
 ### 판단 책임
 
 Spring은 Bug·Issue 생명주기와 데이터 무결성만 관리한다.

@@ -9,3 +9,8 @@ spring:
       ddl-auto: update
   flyway:
     enabled: false
+
+clio:
+  agent:
+    enabled: false
+    url: http://localhost:2024
