@@ -8,8 +8,9 @@ import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public record AgentBugReportResponse(
-		Long bugReportId,
+public record AgentBugResponse(
+		Long bugId,
+		Long projectId,
 		String title,
 		String description,
 		String source,
