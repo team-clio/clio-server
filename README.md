@@ -15,8 +15,8 @@ Coding Agent ──────┘          ▲   │                    ▲
 ```
 
 - **API Server (이 저장소)** — 사용자가 송수신하는 유일한 창구. 요청을 받아 에이전트 그래프로 비동기 전달.
-- **Agent Graph (별도 저장소, Python)** — 에이전트들과 RAG 시스템. 같은 PostgreSQL 에 직접 접근하며,
-  **RAG 테이블은 파이썬이 소유**한다.
+- **Agent Graph (별도 저장소, Python)** — 에이전트들과 RAG 시스템. 업무 데이터는 Server의
+  `internal-api`로만 변경하고, **NormalizedReport·RAG·PCM 테이블은 파이썬이 소유**한다.
 
 > **현재 상태: 전면 재작성 중.** 요구사항 확정에 따라 이전 구현(로컬 코드 분석 파이프라인·RAG·코드 인덱스)을
 > 전부 제거하고 골격만 남긴 상태다. 이전 구현 코드는 git 히스토리(`93a87dd`)에 있고,
@@ -38,10 +38,16 @@ Coding Agent ──────┘          ▲   │                    ▲
 ./gradlew bootRun
 ```
 
-`spring-boot-docker-compose` 가 붙어 있어 `bootRun` 만으로 `compose.yaml`(PostgreSQL + pgvector)이 함께 뜬다.
-직접 띄우려면 `docker compose up -d`.
+`spring-boot-docker-compose` 가 붙어 있어 `bootRun` 만으로 `compose.yaml`의 PostgreSQL + pgvector와
+Ollama가 함께 뜬다. 직접 띄우려면 `docker compose up -d --wait`를 실행한다. Ollama는 최초 실행 시
+`qwen3-embedding:0.6b`를 내려받아 `clio-ollama` volume에 보관하며 11434 포트를 노출한다.
 
-스키마는 현재 `ddl-auto: update` 가 만든다. 마이그레이션 도구는 도입돼 있지 않다.
+macOS의 Docker 컨테이너에서는 일반적으로 Metal 가속을 사용하지 못하므로 네이티브 Ollama보다 느릴 수 있다.
+현재 0.6B 모델은 로컬 재현성을 우선한 CPU 실행 구성이다.
+
+신규 스키마는 현재 `ddl-auto: update`가 만들고, 기존 스키마의 호환 변경은 Flyway migration이
+먼저 적용한다. V2는 과거 `bug_occurrences` 명칭을 정규화하고, V3는 각 수집 원문을
+개별 `bugs` 행으로 보존하면서 workflow 중심 스키마로 전환한다.
 
 ## 개발 규칙
 
