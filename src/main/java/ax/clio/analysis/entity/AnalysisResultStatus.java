@@ -2,5 +2,6 @@ package ax.clio.analysis.entity;
 
 public enum AnalysisResultStatus {
 	COMPLETED,
-	INSUFFICIENT_EVIDENCE
+	INSUFFICIENT_EVIDENCE,
+	NEEDS_REVIEW
 }

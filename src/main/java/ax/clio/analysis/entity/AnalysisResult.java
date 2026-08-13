@@ -3,6 +3,8 @@ package ax.clio.analysis.entity;
 import java.time.Instant;
 import java.util.Objects;
 
+import ax.clio.issue.entity.Issue;
+import ax.clio.workflow.entity.AgentWorkflowRun;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,24 +30,26 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "analysis_results")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AnalysisResult {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	@OneToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "job_id", nullable = false, unique = true)
-	private AnalysisJob job;
+	@JoinColumn(name = "workflow_run_id", nullable = false, unique = true)
+	private AgentWorkflowRun workflowRun;
+
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "issue_id", nullable = false)
+	private Issue issue;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "previous_analysis_result_id")
+	private AnalysisResult previousAnalysisResult;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 30)
 	private AnalysisResultStatus status;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "previous_analysis_job_id")
-	private AnalysisJob previousAnalysisJob;
-
-	/** Agent의 완전한 IssueAnalysis 계약을 분석 작업별 immutable snapshot으로 보존한다. */
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(nullable = false, columnDefinition = "jsonb")
 	private JsonNode resultSnapshot;
@@ -54,16 +58,18 @@ public class AnalysisResult {
 	private Instant createdAt;
 
 	public static AnalysisResult create(
-			AnalysisJob job,
+			AgentWorkflowRun workflowRun,
+			Issue issue,
+			AnalysisResult previous,
 			AnalysisResultStatus status,
-			AnalysisJob previousAnalysisJob,
-			JsonNode resultSnapshot
+			JsonNode snapshot
 	) {
 		AnalysisResult result = new AnalysisResult();
-		result.job = Objects.requireNonNull(job);
+		result.workflowRun = Objects.requireNonNull(workflowRun);
+		result.issue = Objects.requireNonNull(issue);
+		result.previousAnalysisResult = previous;
 		result.status = Objects.requireNonNull(status);
-		result.previousAnalysisJob = previousAnalysisJob;
-		result.resultSnapshot = Objects.requireNonNull(resultSnapshot).deepCopy();
+		result.resultSnapshot = Objects.requireNonNull(snapshot).deepCopy();
 		return result;
 	}
 
@@ -73,6 +79,6 @@ public class AnalysisResult {
 
 	@PrePersist
 	void prePersist() {
-		this.createdAt = Instant.now();
+		createdAt = Instant.now();
 	}
 }

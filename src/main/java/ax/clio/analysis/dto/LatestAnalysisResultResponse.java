@@ -1,15 +1,13 @@
 package ax.clio.analysis.dto;
 
-import ax.clio.analysis.entity.AnalysisResultStatus;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public record AnalysisResultResponse(
+public record LatestAnalysisResultResponse(
 		Long analysisResultId,
 		Long workflowRunId,
-		Long issueId,
-		Long previousAnalysisResultId,
-		AnalysisResultStatus resultStatus
+		JsonNode issueAnalysis
 ) {
 }
