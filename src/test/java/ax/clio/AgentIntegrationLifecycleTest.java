@@ -184,6 +184,11 @@ class AgentIntegrationLifecycleTest {
 				.andExpect(jsonPath("$.bugs[0].id").value(secondBugId))
 				.andExpect(jsonPath("$.bugs[1].id").value(bugId));
 
+		mockMvc.perform(get(external + "/issues/stats"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.totalIssues").value(1))
+				.andExpect(jsonPath("$.totalBugs").value(2));
+
 		mockMvc.perform(get(internal + "/issues/" + issueId + "/analysis-results/latest"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.workflow_run_id").value(runId))

@@ -113,7 +113,7 @@ public class IssueQueryService {
 	public IssueStatsResponse stats(Long projectId, Instant from, Instant to) {
 		requireProject(projectId);
 		List<Issue> issues = issueRepository.findAll(filters(projectId, null, null, null, from, to));
-		List<Bug> bugs = bugRepository.findLinkedForStats(projectId, from, to);
+		List<Bug> bugs = findLinkedBugsForStats(projectId, from, to);
 		Map<String, Long> bySeverity = enumCounts(
 				Arrays.asList(Severity.values()),
 				issues.stream().map(Issue::getSeverity).toList()
@@ -208,6 +208,19 @@ public class IssueQueryService {
 
 	private long count(List<Issue> issues, IssueStatus status) {
 		return issues.stream().filter(issue -> issue.getStatus() == status).count();
+	}
+
+	private List<Bug> findLinkedBugsForStats(Long projectId, Instant from, Instant to) {
+		if (from == null && to == null) {
+			return bugRepository.findLinkedForStats(projectId);
+		}
+		if (from == null) {
+			return bugRepository.findLinkedForStatsTo(projectId, to);
+		}
+		if (to == null) {
+			return bugRepository.findLinkedForStatsFrom(projectId, from);
+		}
+		return bugRepository.findLinkedForStatsBetween(projectId, from, to);
 	}
 
 	private <E extends Enum<E>> Map<String, Long> enumCounts(List<E> values, List<E> actual) {
