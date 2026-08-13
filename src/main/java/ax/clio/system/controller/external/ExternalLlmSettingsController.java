@@ -1,4 +1,6 @@
-package ax.clio.system.controller;
+package ax.clio.system.controller.external;
+
+import static ax.clio.common.api.ApiPaths.EXTERNAL_V1;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,8 +22,8 @@ import ax.clio.system.dto.UpdateLlmModelsRequest;
 import ax.clio.system.dto.UpdateLlmProviderRequest;
 
 @RestController
-@RequestMapping("/api/v1/system/llm")
-public class LlmSettingsController {
+@RequestMapping(EXTERNAL_V1 + "/system/llm")
+public class ExternalLlmSettingsController {
 
 	@GetMapping("/providers")
 	public ResponseEntity<ListResponse<LlmProviderResponse>> getProviders() {

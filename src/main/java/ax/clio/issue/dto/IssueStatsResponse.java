@@ -8,9 +8,9 @@ public record IssueStatsResponse(
 		long openIssues,
 		long inProgressIssues,
 		long resolvedIssues,
-		long totalReports,
+		long totalBugs,
 		Map<String, Long> bySeverity,
 		Map<String, Long> byPriority,
-		List<DailyReportCountResponse> dailyReports
+		List<DailyReportCountResponse> dailyBugs
 ) {
 }

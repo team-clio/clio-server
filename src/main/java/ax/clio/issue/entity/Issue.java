@@ -2,6 +2,8 @@ package ax.clio.issue.entity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.EnumSet;
+import java.util.Map;
 import java.util.Objects;
 
 import ax.clio.bug.entity.Bug;
@@ -31,6 +33,12 @@ import lombok.NoArgsConstructor;
 @Table(name = "issues")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Issue {
+	private static final Map<IssueStatus, EnumSet<IssueStatus>> STATUS_TRANSITIONS = Map.of(
+			IssueStatus.OPEN, EnumSet.of(IssueStatus.IN_PROGRESS, IssueStatus.CLOSED),
+			IssueStatus.IN_PROGRESS, EnumSet.of(IssueStatus.OPEN, IssueStatus.RESOLVED, IssueStatus.CLOSED),
+			IssueStatus.RESOLVED, EnumSet.of(IssueStatus.IN_PROGRESS, IssueStatus.CLOSED),
+			IssueStatus.CLOSED, EnumSet.of(IssueStatus.OPEN)
+	);
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -71,9 +79,6 @@ public class Issue {
 	@Column(nullable = false)
 	private int bugCount;
 
-	@Column(nullable = false)
-	private int occurrenceCount;
-
 	private Instant firstSeenAt;
 
 	private Instant lastSeenAt;
@@ -87,39 +92,49 @@ public class Issue {
 	public static Issue createFromBug(Bug bug, BigDecimal confidence) {
 		Issue issue = new Issue();
 		issue.project = Objects.requireNonNull(bug).getProject();
-		issue.title = bug.getTitle();
+		issue.title = bug.displayTitle();
 		issue.summary = bug.getDescription();
 		issue.status = IssueStatus.OPEN;
 		issue.severity = bug.getSeverity();
 		issue.aiConfidence = confidence;
-		issue.firstSeenAt = bug.getFirstSeenAt();
-		issue.lastSeenAt = bug.getLastSeenAt();
+		issue.firstSeenAt = bug.getOccurredAt();
+		issue.lastSeenAt = bug.getOccurredAt();
 		return issue;
 	}
 
 	public void attach(Bug bug, BigDecimal confidence) {
 		Objects.requireNonNull(bug);
 		this.bugCount += 1;
-		this.occurrenceCount += bug.getOccurrenceCount();
 		this.aiConfidence = confidence;
-		if (this.firstSeenAt == null || bug.getFirstSeenAt().isBefore(this.firstSeenAt)) {
-			this.firstSeenAt = bug.getFirstSeenAt();
+		if (this.firstSeenAt == null || bug.getOccurredAt().isBefore(this.firstSeenAt)) {
+			this.firstSeenAt = bug.getOccurredAt();
 		}
-		if (this.lastSeenAt == null || bug.getLastSeenAt().isAfter(this.lastSeenAt)) {
-			this.lastSeenAt = bug.getLastSeenAt();
+		if (this.lastSeenAt == null || bug.getOccurredAt().isAfter(this.lastSeenAt)) {
+			this.lastSeenAt = bug.getOccurredAt();
 		}
 	}
 
-	public void recordOccurrence(Bug bug, Instant occurredAt) {
-		Objects.requireNonNull(bug);
-		Objects.requireNonNull(occurredAt);
-		this.occurrenceCount += 1;
-		if (this.firstSeenAt == null || occurredAt.isBefore(this.firstSeenAt)) {
-			this.firstSeenAt = occurredAt;
+	public void updateStatus(IssueStatus nextStatus) {
+		Objects.requireNonNull(nextStatus);
+		if (status == nextStatus) {
+			return;
 		}
-		if (this.lastSeenAt == null || occurredAt.isAfter(this.lastSeenAt)) {
-			this.lastSeenAt = occurredAt;
+		if (!STATUS_TRANSITIONS.get(status).contains(nextStatus)) {
+			throw new IllegalStateException(
+					"Unsupported issue status transition: " + status + " -> " + nextStatus
+			);
 		}
+		this.status = nextStatus;
+	}
+
+	public void updateTriage(Priority priority, Severity severity, String assigneeName) {
+		this.priority = priority;
+		this.severity = severity;
+		this.assigneeName = normalize(assigneeName);
+	}
+
+	private static String normalize(String value) {
+		return value == null || value.isBlank() ? null : value.trim();
 	}
 
 	@PrePersist

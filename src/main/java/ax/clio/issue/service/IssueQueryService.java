@@ -9,15 +9,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import ax.clio.bug.entity.BugOccurrence;
+import ax.clio.bug.entity.Bug;
 import ax.clio.bug.entity.Priority;
 import ax.clio.bug.entity.Severity;
-import ax.clio.bug.repository.BugOccurrenceRepository;
+import ax.clio.bug.repository.BugRepository;
 import ax.clio.common.ResourceNotFoundException;
 import ax.clio.common.dto.PageResponse;
 import ax.clio.issue.dto.DailyReportCountResponse;
 import ax.clio.issue.dto.IssueDetailResponse;
-import ax.clio.issue.dto.IssueReportResponse;
+import ax.clio.issue.dto.IssueBugResponse;
 import ax.clio.issue.dto.IssueStatsResponse;
 import ax.clio.issue.dto.IssueSummaryResponse;
 import ax.clio.issue.entity.Issue;
@@ -43,7 +43,7 @@ public class IssueQueryService {
 			"firstSeenAt",
 			"updatedAt",
 			"createdAt",
-			"occurrenceCount",
+			"bugCount",
 			"importanceScore",
 			"riskScore"
 	);
@@ -51,7 +51,7 @@ public class IssueQueryService {
 	private final ProjectRepository projectRepository;
 	private final IssueRepository issueRepository;
 	private final IssueBugRepository issueBugRepository;
-	private final BugOccurrenceRepository occurrenceRepository;
+	private final BugRepository bugRepository;
 
 	@Transactional(readOnly = true)
 	public PageResponse<IssueSummaryResponse> search(
@@ -84,14 +84,11 @@ public class IssueQueryService {
 	public IssueDetailResponse get(Long projectId, Long issueId) {
 		Issue issue = issueRepository.findByIdAndProjectId(issueId, projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Issue not found: " + issueId));
-		List<IssueReportResponse> reports = issueBugRepository
-				.findByIssueIdOrderByBugOccurrenceCountDesc(issueId)
+		List<IssueBugResponse> bugs = issueBugRepository
+				.findByIssueIdOrderByCreatedAtAsc(issueId)
 				.stream()
-				.flatMap(link -> occurrenceRepository
-						.findByBugIdOrderByOccurredAtDesc(link.getBug().getId())
-						.stream()
-						.map(report -> report(link, report)))
-				.sorted(java.util.Comparator.comparing(IssueReportResponse::occurredAt).reversed())
+				.map(this::bug)
+				.sorted(java.util.Comparator.comparing(IssueBugResponse::occurredAt).reversed())
 				.toList();
 		return new IssueDetailResponse(
 				issue.getId(),
@@ -101,12 +98,14 @@ public class IssueQueryService {
 				issue.getStatus().name(),
 				enumName(issue.getPriority()),
 				enumName(issue.getSeverity()),
+				issue.getAssigneeName(),
+				issue.getAiConfidence() == null ? null : issue.getAiConfidence().doubleValue(),
+				issue.getBugCount(),
 				issue.getImportanceScore(),
 				issue.getRiskScore(),
-				issue.getOccurrenceCount(),
 				issue.getFirstSeenAt(),
 				issue.getLastSeenAt(),
-				reports
+				bugs
 		);
 	}
 
@@ -114,7 +113,7 @@ public class IssueQueryService {
 	public IssueStatsResponse stats(Long projectId, Instant from, Instant to) {
 		requireProject(projectId);
 		List<Issue> issues = issueRepository.findAll(filters(projectId, null, null, null, from, to));
-		List<BugOccurrence> reports = occurrenceRepository.findLinkedForStats(projectId, from, to);
+		List<Bug> bugs = bugRepository.findLinkedForStats(projectId, from, to);
 		Map<String, Long> bySeverity = enumCounts(
 				Arrays.asList(Severity.values()),
 				issues.stream().map(Issue::getSeverity).toList()
@@ -123,9 +122,9 @@ public class IssueQueryService {
 				Arrays.asList(Priority.values()),
 				issues.stream().map(Issue::getPriority).toList()
 		);
-		List<DailyReportCountResponse> daily = reports.stream()
+		List<DailyReportCountResponse> daily = bugs.stream()
 				.collect(Collectors.groupingBy(
-						report -> report.getOccurredAt().atZone(ZoneOffset.UTC).toLocalDate(),
+						bug -> bug.getOccurredAt().atZone(ZoneOffset.UTC).toLocalDate(),
 						java.util.TreeMap::new,
 						Collectors.counting()
 				))
@@ -138,7 +137,7 @@ public class IssueQueryService {
 				count(issues, IssueStatus.OPEN),
 				count(issues, IssueStatus.IN_PROGRESS),
 				count(issues, IssueStatus.RESOLVED),
-				reports.size(),
+				bugs.size(),
 				bySeverity,
 				byPriority,
 				daily
@@ -190,31 +189,20 @@ public class IssueQueryService {
 	}
 
 	private IssueSummaryResponse summary(Issue issue) {
-		return new IssueSummaryResponse(
-				issue.getId(),
-				issue.getProject().getId(),
-				issue.getTitle(),
-				issue.getSummary(),
-				issue.getStatus().name(),
-				enumName(issue.getPriority()),
-				enumName(issue.getSeverity()),
-				issue.getImportanceScore(),
-				issue.getRiskScore(),
-				issue.getOccurrenceCount(),
-				issue.getFirstSeenAt(),
-				issue.getLastSeenAt(),
-				issue.getUpdatedAt()
-		);
+		return IssueSummaryResponse.from(issue);
 	}
 
-	private IssueReportResponse report(IssueBug link, BugOccurrence report) {
-		return new IssueReportResponse(
-				report.getId(),
-				report.getTitle(),
-				report.getSource().name(),
+	private IssueBugResponse bug(IssueBug link) {
+		Bug bug = link.getBug();
+		return new IssueBugResponse(
+				bug.getId(),
+				bug.getTitle(),
+				bug.getSource().name(),
+				bug.getErrorType(),
+				bug.firstStackFrame(),
 				link.getGroupedBy().name(),
 				link.getConfidence() == null ? null : link.getConfidence().doubleValue(),
-				report.getOccurredAt()
+				bug.getOccurredAt()
 		);
 	}
 

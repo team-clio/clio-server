@@ -11,11 +11,13 @@ public record IssueDetailResponse(
 		String status,
 		String priority,
 		String severity,
+		String assigneeName,
+		Double aiConfidence,
+		Integer bugCount,
 		Integer importanceScore,
 		Integer riskScore,
-		Integer reportCount,
 		Instant firstSeenAt,
 		Instant lastSeenAt,
-		List<IssueReportResponse> reports
+		List<IssueBugResponse> bugs
 ) {
 }

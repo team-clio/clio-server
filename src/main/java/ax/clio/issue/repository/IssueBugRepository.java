@@ -12,5 +12,7 @@ public interface IssueBugRepository extends JpaRepository<IssueBug, Long> {
 
 	boolean existsByIssueIdAndBugId(Long issueId, Long bugId);
 
-	List<IssueBug> findByIssueIdOrderByBugOccurrenceCountDesc(Long issueId);
+	List<IssueBug> findByIssueIdOrderByCreatedAtAsc(Long issueId);
+
+	List<IssueBug> findByBugIdIn(List<Long> bugIds);
 }
