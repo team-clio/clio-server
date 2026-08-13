@@ -23,135 +23,189 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc
 @Transactional
 class AgentIntegrationLifecycleTest {
-
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-	@Autowired
-	private MockMvc mockMvc;
-
-	@Autowired
-	private ProjectRepository projectRepository;
+	@Autowired private MockMvc mockMvc;
+	@Autowired private ProjectRepository projectRepository;
 
 	@Test
-	void completesReportToIssueAnalysisLifecycle() throws Exception {
+	void completesBugToIssueAnalysisWorkflow() throws Exception {
 		Project project = projectRepository.save(Project.create("Clio", null));
-		String projectPath = "/api/v1/projects/" + project.getId();
-		String internalProjectPath = "/internal/api/v1/projects/" + project.getId();
+		String external = "/external-api/v1/projects/" + project.getId();
+		String internal = "/internal-api/v1/projects/" + project.getId();
 
-		JsonNode collected = json(mockMvc.perform(post(projectPath + "/bug-reports")
+		JsonNode collected = json(mockMvc.perform(post(external + "/bugs")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
 								  "title": "Saved search fails",
 								  "description": "HTTP 500 after clicking save",
 								  "source": "API",
-								  "errorType": "IllegalStateException",
+								  "error_type": "IllegalStateException",
 								  "message": "saved search failed",
-								  "stackTrace": ["SavedSearchService.run"],
-								  "occurredAt": "2026-08-10T00:00:00Z"
+								  "stack_trace": ["SavedSearchService.run"],
+								  "occurred_at": "2026-08-10T00:00:00Z"
 								}
 								"""))
 				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.status").value("NEW"))
 				.andReturn().getResponse().getContentAsString());
-		long reportId = collected.get("id").asLong();
+		long bugId = collected.get("id").asLong();
 
-		mockMvc.perform(get(internalProjectPath + "/bug-reports/" + reportId))
+		mockMvc.perform(get(internal + "/bugs/" + bugId))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.bug_report_id").value(reportId));
+				.andExpect(jsonPath("$.bug_id").value(bugId))
+				.andExpect(jsonPath("$.stack_trace[0]").value("SavedSearchService.run"));
 
-		JsonNode grouped = json(mockMvc.perform(post(
-						internalProjectPath + "/bug-reports/" + reportId + "/grouping-decisions"
-				)
+		JsonNode workflow = json(mockMvc.perform(post(internal + "/workflow-runs")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
-								  "request_id": "REQ-LIFECYCLE-GROUP",
-								  "grouping_decision": {
-								    "bug_report_id": %d,
-								    "action": "CREATE_NEW",
-								    "confidence": 0.0
-								  }
+								  "request_id": "REQ-LIFECYCLE",
+								  "request_type": "process_report",
+								  "request_payload": {"project_id": %d, "bug_id": %d}
 								}
-								""".formatted(reportId)))
+								""".formatted(project.getId(), bugId)))
 				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.status").value("PENDING"))
 				.andReturn().getResponse().getContentAsString());
-		long bugId = grouped.get("resulting_bug_id").asLong();
+		long runId = workflow.get("id").asLong();
 
-		JsonNode matched = json(mockMvc.perform(post(
-						internalProjectPath + "/bugs/" + bugId + "/match-decisions"
-				)
+		mockMvc.perform(patch(internal + "/workflow-runs/" + runId)
 						.contentType(MediaType.APPLICATION_JSON)
-						.content("""
-								{
-								  "request_id": "REQ-LIFECYCLE-MATCH",
-								  "bug_report_id": %d,
-								  "match_decision": {
-								    "bug_id": %d,
-								    "action": "CREATE_NEW",
-								    "confidence": 0.0
-								  }
-								}
-								""".formatted(reportId, bugId)))
-				.andExpect(status().isCreated())
-				.andReturn().getResponse().getContentAsString());
-		long issueId = matched.get("resulting_issue_id").asLong();
-
-		JsonNode createdJob = json(mockMvc.perform(post(
-						internalProjectPath + "/issues/" + issueId + "/analysis-jobs"
-				)
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("""
-								{
-								  "request_id": "REQ-LIFECYCLE-JOB",
-								  "trigger_bug_id": %d
-								}
-								""".formatted(bugId)))
-				.andExpect(status().isCreated())
-				.andReturn().getResponse().getContentAsString());
-		long jobId = createdJob.get("analysis_job_id").asLong();
-		String jobPath = internalProjectPath + "/analysis-jobs/" + jobId;
-
-		mockMvc.perform(get(jobPath + "/context"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.issue.issue_id").value(issueId))
-				.andExpect(jsonPath("$.trigger_bug_id").value(bugId));
-
-		mockMvc.perform(patch(jobPath)
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("""
-								{
-								  "request_id": "REQ-LIFECYCLE-START",
-								  "status": "RUNNING"
-								}
-								"""))
+						.content("{\"status\":\"RUNNING\",\"latest_checkpoint\":{\"node\":\"normalize\"}}"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("RUNNING"));
 
-		mockMvc.perform(put(jobPath + "/result")
+		JsonNode createdIssue = json(mockMvc.perform(post(internal + "/issues")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
-								  "request_id": "REQ-LIFECYCLE-RESULT",
+								  "workflow_run_id": %d,
+								  "bug_id": %d,
+								  "confidence": 0.0
+								}
+								""".formatted(runId, bugId)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.issue_created").value(true))
+				.andExpect(jsonPath("$.bug_linked").value(true))
+				.andReturn().getResponse().getContentAsString());
+		long issueId = createdIssue.get("issue_id").asLong();
+
+		mockMvc.perform(post(internal + "/issues")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "workflow_run_id": %d,
+								  "bug_id": %d,
+								  "confidence": 0.0
+								}
+								""".formatted(runId, bugId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.issue_id").value(issueId))
+				.andExpect(jsonPath("$.issue_created").value(false))
+				.andExpect(jsonPath("$.bug_linked").value(false));
+
+		JsonNode secondBug = json(mockMvc.perform(post(external + "/bugs")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "title": "Saved search fails again",
+								  "source": "API",
+								  "message": "same failure",
+								  "stack_trace": [],
+								  "occurred_at": "2026-08-11T00:00:00Z"
+								}
+								"""))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString());
+		long secondBugId = secondBug.get("id").asLong();
+		JsonNode linkWorkflow = json(mockMvc.perform(post(internal + "/workflow-runs")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "request_id": "REQ-LINK-EXISTING",
+								  "request_type": "process_report",
+								  "request_payload": {"bug_id": %d}
+								}
+								""".formatted(secondBugId)))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString());
+		long linkRunId = linkWorkflow.get("id").asLong();
+		mockMvc.perform(patch(internal + "/workflow-runs/" + linkRunId)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"status\":\"RUNNING\"}"))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(post(internal + "/issues/" + issueId + "/bugs")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "workflow_run_id": %d,
+								  "bug_id": %d,
+								  "confidence": 0.97
+								}
+								""".formatted(linkRunId, secondBugId)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.issue_id").value(issueId))
+				.andExpect(jsonPath("$.issue_created").value(false))
+				.andExpect(jsonPath("$.bug_linked").value(true));
+		mockMvc.perform(patch(internal + "/workflow-runs/" + linkRunId)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"status\":\"COMPLETED\",\"result_snapshot\":{\"action\":\"link_existing\"}}"))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(put(internal + "/workflow-runs/" + runId + "/analysis-result")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "issue_id": %d,
 								  "issue_analysis": {
-								    "analysis_job_id": %d,
+								    "workflow_run_id": %d,
 								    "project_id": %d,
 								    "issue_id": %d,
 								    "status": "INSUFFICIENT_EVIDENCE",
-								    "evidence": [],
-								    "relations": [],
-								    "findings": [],
-								    "hypotheses": [],
-								    "warnings": ["repository is not synchronized"]
+								    "evidence": [], "relations": [], "findings": [], "hypotheses": []
 								  }
 								}
-								""".formatted(jobId, project.getId(), issueId)))
+								""".formatted(issueId, runId, project.getId(), issueId)))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.job_status").value("COMPLETED"));
+				.andExpect(jsonPath("$.workflow_run_id").value(runId));
 
-		mockMvc.perform(get(projectPath + "/issues/" + issueId))
+		mockMvc.perform(patch(internal + "/workflow-runs/" + runId)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"status\":\"COMPLETED\",\"result_snapshot\":{\"issue_id\":" + issueId + "}}"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.id").value(issueId))
-				.andExpect(jsonPath("$.reportCount").value(1));
+				.andExpect(jsonPath("$.status").value("COMPLETED"));
+
+		mockMvc.perform(get(external + "/issues/" + issueId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.bugCount").value(2))
+				.andExpect(jsonPath("$.bugs[0].id").value(secondBugId))
+				.andExpect(jsonPath("$.bugs[1].id").value(bugId));
+
+		mockMvc.perform(get(internal + "/issues/" + issueId + "/analysis-results/latest"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.workflow_run_id").value(runId))
+				.andExpect(jsonPath("$.issue_analysis.status").value("INSUFFICIENT_EVIDENCE"));
+	}
+
+	@Test
+	void workflowRequestIdIsIdempotentAndRejectsDifferentPayload() throws Exception {
+		Project project = projectRepository.save(Project.create("Clio", null));
+		String path = "/internal-api/v1/projects/" + project.getId() + "/workflow-runs";
+		String body = """
+				{"request_id":"REQ-SAME","request_type":"document_added","request_payload":{"document_id":"D1"}}
+				""";
+
+		JsonNode first = json(mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(body))
+				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+		mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(body))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.id").value(first.get("id").asLong()));
+		mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(
+						"{\"request_id\":\"REQ-SAME\",\"request_type\":\"document_added\",\"request_payload\":{\"document_id\":\"D2\"}}"))
+				.andExpect(status().isConflict());
 	}
 
 	private JsonNode json(String value) throws Exception {
