@@ -1,87 +1,46 @@
-# 03. Decisions — Agent Graph 연동 API 구현
+# Agent Graph 연동 결정 기록
 
-## 목적
+## D1. Bug 모델
 
-Agent 연동 API 구현에 영향을 준 D1~D8의 선택, 핵심 근거와 결과를 한 문서에서 확인한다.
-모든 결정은 확정·반영 완료 상태다.
+수집 오류 한 건을 `Bug` 한 행으로 저장한다. 동일 원인의 여러 Bug는 `issue_bugs`로
+Issue 하나에 연결한다. `BugReport`/occurrence 계층과 grouping decision은 제거한다.
 
-## D1. Agent 소유 엔티티 제거
+## D2. 판단 소유권
 
-- 결정일: 2026-08-09
-- 선택: Agent가 소유하는 AI/RAG JPA 엔티티를 Server에서 제거한다.
-- 근거: 사용하지 않는 엔티티도 Hibernate 관리 대상이며, Agent Alembic schema와 충돌할 수 있다.
-- 제외: 엔티티를 남기고 사용하지 않는 안은 테이블 소유권 충돌을 해결하지 못한다.
-- 결과: `BugEmbedding`, Code Memory, Decision Memory, `ProjectContextChunk` 매핑을 제거했다.
-  Server는 업무 데이터만, Agent는 retrieval·embedding·PCM 데이터를 소유한다.
+정규화, 유사 Bug 검색, 후보 Issue 구성, 매칭, 분석, 품질 판단은 Agent가 전담한다.
+Spring은 주어진 식별자의 원문 projection과 결과 적용 transaction만 제공한다.
 
-## D2. Agent 연동 JSON과 ID
+## D3. Agent 진입점
 
-- 결정일: 2026-08-09
-- 선택: Java DTO는 camelCase, Agent 연동 JSON만 snake_case를 사용한다.
-- 근거: Java 명명 규칙과 Agent Pydantic 계약을 모두 지키며 전역 API 호환성도 유지한다.
-- 제외: Server 전체 JSON 변경은 기존 API에 영향을 주고, Agent adapter 변환은 불필요한 계층을 만든다.
-- 결과: Agent DTO에만 `SnakeCaseStrategy`를 적용하고 ID는 양수 JSON number로 정했다.
+Spring은 `clio_agent` 루트 그래프만 호출한다. 기능별 독립 그래프는 Agent 내부
+재사용·개발 entrypoint이며 Spring API가 아니다.
 
-## D3. 정규화·분석 결과 저장
+## D4. 공통 workflow lifecycle
 
-- 결정일: 2026-08-09
-- 선택: `NormalizedReport`는 Agent만 저장하고, Server는 분석별 전체 `IssueAnalysis` snapshot을 저장한다.
-- 근거: 정규화 결과를 양쪽에 저장하면 active version이 갈리고, 분석 JSON 구조를 컬럼으로 나누면
-  Evidence→Finding→Hypothesis 관계가 손실될 수 있다.
-- 제외: 최신 결과 덮어쓰기는 과거 분석 재현과 재분석 비교가 불가능하다.
-- 결과: 재분석마다 새 Job과 immutable JSONB Result를 생성한다.
+`validate_request` 성공 후 `agent_workflow_runs`를 `PENDING`으로 생성하고 실제 분기
+시작 시 `RUNNING`, 마지막 필수 작업과 Spring 반영 후 `COMPLETED`, 기술적 실패 시
+`FAILED`로 전이한다. 업무 결과인 `NEEDS_REVIEW`와 `INSUFFICIENT_EVIDENCE`는
+`COMPLETED`다.
 
-## D4. Write API 멱등성
+## D5. 멱등성
 
-- 결정일: 2026-08-10
-- 선택: body의 `request_id`를 `(project, operation, request_id)` 범위 멱등 키로 사용한다.
-- 근거: Agent 실행 ID를 그대로 추적하고 timeout 재시도에도 최초 응답을 재현할 수 있다.
-- 제외: unique constraint만으로는 같은 키의 payload 충돌과 응답 재생을 처리할 수 없다.
-- 결과: 동일 키·동일 payload는 기존 응답을 반환하고, 다른 payload는 `409`를 반환한다.
-  사용자용 BugReport 수집 API에는 적용하지 않는다.
+프로젝트별 `request_id`와 canonical request hash로 root 요청을 보호한다. 별도
+`agent_operations` 응답 저장 테이블은 사용하지 않는다. `issue_bugs.bug_id`,
+workflow별 decision/result unique 제약도 함께 적용한다.
 
-## D5. Issue 매칭 결정 적용
+## D6. 분석 결과
 
-- 결정일: 2026-08-10
-- 선택: `AUTO_LINK`는 기존 Issue 연결, `CREATE_NEW`는 생성 후 연결, `REVIEW`는 기록만 한다.
-- 근거: 검토 전에 관계를 바꾸거나 기존 연결을 자동 이동하면 통계와 과거 분석의 의미가 달라진다.
-- 제외: REVIEW 임시 연결과 기존 연결 자동 이동은 안전하지 않다.
-- 결과: 다른 Issue에 연결된 Bug의 이동은 `409`, 같은 연결 재적용은 기존 관계를 반환한다.
+`analysis_jobs`를 제거한다. 분석 결과는 `workflow_run_id`와 `issue_id`에 연결하고,
+재분석은 `previous_analysis_result_id`로 immutable snapshot 이력을 만든다. 결과 저장과
+전체 workflow 완료는 분리한다.
 
-## D6. AnalysisJob 생명주기
+## D7. Retrieval 경계
 
-- 결정일: 2026-08-10
-- 선택: Server가 Job을 먼저 만들고 Agent에 ID를 전달하며, 결과 저장과 완료를 한 트랜잭션으로 묶는다.
-- 근거: Agent 계약은 실행 전 `analysis_job_id`가 필요하고 결과 없는 완료 상태를 허용하면 안 된다.
-- 제외: PATCH의 임의 상태 전이는 결과와 상태 사이의 불일치를 만든다.
-- 결과: `PENDING → RUNNING`, `PENDING/RUNNING → FAILED`만 PATCH로 허용한다.
-  RUNNING Job의 결과 PUT만 `COMPLETED`로 전이하며, 재분석은 완료된 이전 snapshot을 참조한다.
+Agent의 `bug_retrieval_documents`에는 `project_id`, `bug_id`만 식별자로 저장한다.
+Spring DB FK와 `bug_report_id`는 제거한다. Agent는 exact·lexical·vector 검색과 RRF로
+유사 Bug ID를 만든 뒤 Spring에서 그 Bug들의 Issue 연결 projection만 읽는다.
 
-## D7. PCM 소유권
+## D8. 동기화 저장소
 
-- 결정일: 2026-08-10
-- 선택: Server는 PCM을 모르고 Client와 Agent를 연결하는 역할만 한다.
-- 근거: PCM revision, Knowledge commit, Repository snapshot은 Agent가 실행 시 직접 고정한다.
-- 제외: Server 복제는 두 저장소의 최신값 불일치와 Agent schema 결합을 만든다.
-- 결과: PCM sync·snapshot API 3개와 관련 operation type을 범위에서 제거했다.
-
-## D8. 동일 Bug 판단
-
-- 결정일: 2026-08-10
-- 선택: Agent가 BugReport를 기존 Bug에 묶을지 판단하고 Server는 그 결정을 반영한다.
-- 근거: 문자열 fingerprint는 표현이 다른 동일 현상을 나누거나 다른 현상을 합칠 수 있다.
-- 제외: Server fingerprint 자동 연결과 모든 Report의 개별 Bug 생성은 의미 기반 grouping을 지원하지 못한다.
-- 결과: Agent가 `MATCH_EXISTING`, `CREATE_NEW`, `REVIEW`를 반환한다. Server는 발생 관계만
-  트랜잭션으로 변경하고 fingerprint를 제거했다. 기존 Bug에 Issue가 있으면 Issue matching은 생략한다.
-
-## 최종 경계
-
-```text
-Client → Server: 요청과 업무 데이터
-Server → Agent: 실행에 필요한 식별자와 원본
-Agent → Server: Bug grouping, Issue matching, 분석 결과
-Agent 내부: 정규화, 검색, PCM, Repository snapshot
-```
-
-Agent Graph가 Server를 호출하는 7개 연동 API는 `/internal/api/v1` 아래에만 노출한다.
-사용자용 `/api/v1`에는 Agent 원본 조회·결정 반영·분석 작업 API를 노출하지 않는다.
+문서 PCM, Git mirror, repository manifest와 LangGraph checkpoint는 Agent가 소유한다.
+Spring은 공통 workflow 상태와 `project_sources`, 필요한 credential 참조만 관리한다.

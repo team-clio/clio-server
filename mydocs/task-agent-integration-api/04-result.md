@@ -1,65 +1,39 @@
-# 04. Result — Agent Graph 연동 API 구현
+# 04. Result — Agent Graph 연동 API 리팩터링
 
 ## 결과
 
-Server가 Client 업무 데이터와 Agent의 판단 결과를 연결·보관하도록 7개 연동 API를 구현했다.
-PCM, 정규화, 검색과 분석 판단은 Agent에 남겨 Server가 Agent 내부 모델을 알지 않도록 경계를 정리했다.
+Spring은 Bug·Issue와 workflow 생명주기만 관리하고, Agent의 판단 모델은 알지 않도록
+경계를 정리했다. Agent는 최상위 `clio_agent` 안에서 후보 검색과 매칭을 수행한 뒤
+필요한 도메인 변경만 명시적인 internal API로 요청한다.
 
-## 구현된 Agent 연동 API
+## 핵심 Agent 연동 API
 
-| 구분 | API | 결과 |
+| 구분 | 요청 | Spring 책임 |
 |---|---|---|
-| 입력 조회 | `GET .../bug-reports/{reportId}` | 원본 BugReport 반환 |
-| 결정 반영 | `POST .../bug-reports/{reportId}/grouping-decisions` | Bug grouping 적용 |
-| 결정 반영 | `POST .../bugs/{bugId}/match-decisions` | Issue 연결·생성·검토 기록 |
-| 작업 생성 | `POST .../issues/{issueId}/analysis-jobs` | 최초 분석·재분석 Job 생성 |
-| 상태 변경 | `PATCH .../analysis-jobs/{jobId}` | 실행·실패 상태 전이 |
-| 입력 조회 | `GET .../analysis-jobs/{jobId}/context` | 분석 context와 이전 결과 반환 |
-| 결과 반영 | `PUT .../analysis-jobs/{jobId}/result` | 결과 snapshot 저장과 완료 처리 |
+| Bug 조회 | Bug 단건·cursor 목록 조회 | 수집 원문 반환 |
+| 연결 조회 | 검색된 Bug ID들의 Issue 연결 조회 | 관계 projection 반환, 후보 판단 없음 |
+| Issue 생성 | 새 Issue 생성 요청 | Issue 생성과 요청 Bug 연결 |
+| Bug 연결 | 기존 Issue에 Bug 연결 요청 | 관계 생성과 Issue 집계 갱신 |
+| workflow | 실행 생성·상태 변경 | `PENDING/RUNNING/COMPLETED/FAILED` 관리 |
+| 분석 | Issue·Bug 조회와 분석 결과 저장 | immutable 분석 snapshot 보존 |
+
+Issue 생성과 기존 Issue 연결은 서로 다른 API다. Spring에는 `CREATE_NEW`, `AUTO_LINK`,
+`REVIEW`를 받는 판정 적용 API가 없고 `bug_match_decisions`도 저장하지 않는다.
+`REVIEW`는 Agent workflow의 정상 결과로만 남는다.
 
 전체 JSON 예시는 [`api-contract.md`](api-contract.md)를 참조한다.
 
-## 함께 완료한 기능
+## 무결성과 멱등성
 
-- BugReport 수집·목록 조회와 Issue 목록·상세·통계 API의 `501`을 제거했다.
-- Agent의 `MATCH_EXISTING`, `CREATE_NEW`, `REVIEW` Bug grouping 결정을 원자적으로 반영한다.
-- 기존 Bug에 Issue가 연결돼 있으면 같은 Issue를 반환하고 Issue matcher 재실행을 막는다.
-- Issue match 결정과 Issue 생성·연결을 하나의 트랜잭션에서 처리한다.
-- 재분석은 완료된 이전 Job과 전체 IssueAnalysis snapshot을 참조한다.
-- 같은 `request_id`와 요청은 결과를 재생하고, 내용이 다르면 `409`를 반환한다.
-- Java DTO는 camelCase를 유지하고 Agent 연동 JSON 응답·요청만 snake_case로 직렬화한다.
-
-## Agent 변경
-
-`clio-agent-graph`의 `feat/bug-grouping-contract` 브랜치에 Agent 소유 Bug grouping을 추가했다.
-
-- 공개 `bug_grouper` graph와 입출력 모델
-- 기존 Bug 후보 조회 port와 PostgreSQL adapter
-- grouping 판단 service와 LangChain structured-output adapter
-- 기존 matcher가 grouping 결과 뒤에서 동작하도록 계약 갱신
-
-관련 커밋: `9b9e948 feat: add Agent-owned Bug grouping`
-
-이 변경은 별도 저장소의 의존 작업이므로 Server PR과 함께 검토·병합해야 전체 흐름이 동작한다.
-
-## 검증
-
-- Server 전체 Gradle 테스트: 27개 성공, 실패 0개
-- 수집 → grouping → Issue matching → Job 실행 → context → 결과 저장 → Issue 조회 통합 흐름 성공
-- Agent 전체 pytest 성공
-- Agent Ruff 검사와 format 검사 성공
-
-## 결정 반영 요약
-
-- Server의 AI 전용 엔티티를 제거했다.
-- Agent 연동 JSON만 snake_case를 사용한다.
-- 분석 결과는 완전한 JSON snapshot으로 보존한다.
-- write API는 body의 `request_id`로 멱등 처리한다.
-- PCM과 Bug 동일성 판단은 Agent가 소유한다.
-- Server는 Agent 판단에 따른 업무 관계와 상태만 변경한다.
+- 두 쓰기 API는 `RUNNING`인 `process_report` workflow만 받는다.
+- workflow payload와 요청의 `bug_id`가 다르면 `409`다.
+- `issue_bugs.bug_id` unique 제약으로 하나의 Bug가 여러 Issue에 연결되지 않는다.
+- 새 Issue 생성 재요청에서 Bug가 이미 연결돼 있으면 기존 Issue를 반환한다.
+- 기존 Issue 연결 재요청은 같은 관계면 기존 결과를 반환하고 다른 Issue면 `409`다.
+- Issue 생성·연결, `bug_count`와 관측 시각 갱신, Bug 상태 전이는 한 트랜잭션이다.
 
 ## 남은 과제
 
-- Server가 Client 요청을 받아 Agent 실행을 시작하는 outbound orchestration은 별도 작업이다.
-- 운영 DB schema migration 작성과 기존 데이터 전환은 이번 범위에 포함하지 않았다.
-- 인증·인가, 운영 관측성, PostgreSQL 장애 복구 검증이 필요하다.
+- Spring이 Client 이벤트를 받아 Agent 실행을 시작하는 outbound orchestration
+- 운영 인증·인가와 관측성
+- Agent의 영속 LangGraph checkpoint 구성
