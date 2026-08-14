@@ -1,9 +1,8 @@
 package ax.clio.project.entity;
 
 public enum ProjectSourceSyncStatus {
-	UNKNOWN,
+	PENDING,
 	SYNCED,
-	OUT_OF_SYNC,
 	SYNCING,
 	FAILED
 }

@@ -133,7 +133,7 @@ BEGIN
                    job.issue_id,
                    NULL,
                    legacy.status::text,
-                   (legacy.result_snapshot - 'analysis_job_id')
+                   (legacy.result_snapshot - 'analysis_job_id'::text)
                        || jsonb_build_object('workflow_run_id', workflow.workflow_run_id),
                    legacy.created_at
             FROM legacy_analysis_results legacy
@@ -162,13 +162,13 @@ BEGIN
             SET result_snapshot = jsonb_set(
                 result_snapshot,
                 '{revision_summary}',
-                (result_snapshot->'revision_summary' - 'previous_analysis_job_id')
+                ((result_snapshot->'revision_summary') - 'previous_analysis_job_id'::text)
                     || jsonb_build_object(
                         'previous_analysis_result_id', previous_analysis_result_id
                     )
             )
             WHERE previous_analysis_result_id IS NOT NULL
-              AND result_snapshot->'revision_summary' IS NOT NULL;
+              AND (result_snapshot->'revision_summary') IS NOT NULL;
 
             DROP TABLE legacy_analysis_results;
         END IF;
