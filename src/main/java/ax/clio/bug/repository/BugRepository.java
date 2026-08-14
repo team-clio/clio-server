@@ -27,9 +27,37 @@ public interface BugRepository extends JpaRepository<Bug, Long>, JpaSpecificatio
 			from Bug bug
 			join IssueBug issueBug on issueBug.bug = bug
 			where issueBug.issue.project.id = :projectId
-			  and (:from is null or bug.occurredAt >= :from)
-			  and (:to is null or bug.occurredAt <= :to)
 			order by bug.occurredAt
 			""")
-	List<Bug> findLinkedForStats(Long projectId, Instant from, Instant to);
+	List<Bug> findLinkedForStats(Long projectId);
+
+	@Query("""
+			select bug
+			from Bug bug
+			join IssueBug issueBug on issueBug.bug = bug
+			where issueBug.issue.project.id = :projectId
+			  and bug.occurredAt >= :from
+			order by bug.occurredAt
+			""")
+	List<Bug> findLinkedForStatsFrom(Long projectId, Instant from);
+
+	@Query("""
+			select bug
+			from Bug bug
+			join IssueBug issueBug on issueBug.bug = bug
+			where issueBug.issue.project.id = :projectId
+			  and bug.occurredAt <= :to
+			order by bug.occurredAt
+			""")
+	List<Bug> findLinkedForStatsTo(Long projectId, Instant to);
+
+	@Query("""
+			select bug
+			from Bug bug
+			join IssueBug issueBug on issueBug.bug = bug
+			where issueBug.issue.project.id = :projectId
+			  and bug.occurredAt between :from and :to
+			order by bug.occurredAt
+			""")
+	List<Bug> findLinkedForStatsBetween(Long projectId, Instant from, Instant to);
 }

@@ -62,6 +62,15 @@ public class Project {
 		return name.trim().toLowerCase(Locale.ROOT);
 	}
 
+	public void update(String name, String description) {
+		if (name == null || name.isBlank()) {
+			throw new IllegalArgumentException("Project name must not be blank.");
+		}
+		this.name = name.trim();
+		this.normalizedName = normalizeName(name);
+		this.description = description == null || description.isBlank() ? null : description.trim();
+	}
+
 	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();

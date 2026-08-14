@@ -16,6 +16,8 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
 	boolean existsByNormalizedName(String normalizedName);
 
+	boolean existsByNormalizedNameAndIdNot(String normalizedName, Long id);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select project from Project project where project.id = :projectId")
 	Optional<Project> findByIdForUpdate(@Param("projectId") Long projectId);
