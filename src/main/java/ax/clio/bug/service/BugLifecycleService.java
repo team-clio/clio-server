@@ -3,6 +3,7 @@ package ax.clio.bug.service;
 import ax.clio.bug.dto.BugLifecycleResponse;
 import ax.clio.bug.dto.UpdateBugRequest;
 import ax.clio.bug.entity.Bug;
+import ax.clio.bug.entity.BugStatus;
 import ax.clio.bug.repository.BugRepository;
 import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
@@ -31,5 +32,25 @@ public class BugLifecycleService {
 			throw new ConflictException(exception.getMessage());
 		}
 		return BugLifecycleResponse.from(bug);
+	}
+
+	@Transactional
+	public void markAnalyzing(Long projectId, Long bugId) {
+		changeStatus(projectId, bugId, BugStatus.ANALYZING);
+	}
+
+	@Transactional
+	public void markNew(Long projectId, Long bugId) {
+		changeStatus(projectId, bugId, BugStatus.NEW);
+	}
+
+	private void changeStatus(Long projectId, Long bugId, BugStatus nextStatus) {
+		Bug bug = bugRepository.findByIdAndProjectId(bugId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Bug not found: " + bugId));
+		try {
+			bug.updateStatus(nextStatus);
+		} catch (IllegalStateException exception) {
+			throw new ConflictException(exception.getMessage());
+		}
 	}
 }

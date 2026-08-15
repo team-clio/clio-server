@@ -39,7 +39,9 @@ public class IssueLifecycleService {
 			return response(existing, false, false);
 		}
 
-		Issue issue = issueRepository.save(Issue.createFromBug(bug, request.confidence()));
+		Issue issue = issueRepository.save(Issue.createFromBug(
+				bug, request.confidence(), request.title(), request.description()
+		));
 		IssueBug link = persistLink(issue, bug, request.confidence());
 		return response(link, true, true);
 	}

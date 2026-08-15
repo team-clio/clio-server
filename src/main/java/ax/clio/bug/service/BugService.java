@@ -2,6 +2,7 @@ package ax.clio.bug.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 import ax.clio.agent.event.BugCollectedEvent;
 import ax.clio.bug.dto.AgentBugResponse;
@@ -67,6 +68,18 @@ public class BugService {
 	public AgentBugResponse getForAgent(Long projectId, Long bugId) {
 		Bug bug = find(projectId, bugId);
 		return agentResponse(bug);
+	}
+
+	@Transactional(readOnly = true)
+	public AgentBugResponse representativeForIssue(Long projectId, Long issueId) {
+		IssueBug link = issueBugRepository.findByIssueIdOrderByCreatedAtAsc(issueId).stream()
+				.filter(item -> item.getBug().getProject().getId().equals(projectId))
+				.max(Comparator.comparing(
+						IssueBug::getConfidence,
+						Comparator.nullsFirst(Comparator.naturalOrder())
+				).thenComparing(item -> item.getBug().getOccurredAt()))
+				.orElseThrow(() -> new ResourceNotFoundException("Issue has no linked bugs: " + issueId));
+		return agentResponse(link.getBug());
 	}
 
 	@Transactional(readOnly = true)

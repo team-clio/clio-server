@@ -89,11 +89,19 @@ public class Issue {
 	@Column(nullable = false)
 	private Instant updatedAt;
 
-	public static Issue createFromBug(Bug bug, BigDecimal confidence) {
+	public static Issue createFromBug(
+			Bug bug, BigDecimal confidence, String title, String description
+	) {
 		Issue issue = new Issue();
 		issue.project = Objects.requireNonNull(bug).getProject();
-		issue.title = bug.displayTitle();
-		issue.summary = bug.getDescription();
+		issue.title = normalize(title);
+		if (issue.title == null) {
+			issue.title = bug.displayTitle();
+		}
+		issue.summary = normalize(description);
+		if (issue.summary == null) {
+			issue.summary = bug.getDescription();
+		}
 		issue.status = IssueStatus.OPEN;
 		issue.severity = bug.getSeverity();
 		issue.aiConfidence = confidence;
@@ -131,6 +139,11 @@ public class Issue {
 		this.priority = priority;
 		this.severity = severity;
 		this.assigneeName = normalize(assigneeName);
+	}
+
+	public void applyRiskAssessment(int riskScore, Priority priority) {
+		this.riskScore = riskScore;
+		this.priority = Objects.requireNonNull(priority);
 	}
 
 	private static String normalize(String value) {

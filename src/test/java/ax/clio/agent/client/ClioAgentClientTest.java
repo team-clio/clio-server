@@ -2,6 +2,7 @@ package ax.clio.agent.client;
 
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -26,6 +27,7 @@ class ClioAgentClientTest {
 		);
 		server.expect(once(), requestTo("http://agent:2024/runs"))
 				.andExpect(method(HttpMethod.POST))
+				.andExpect(header("Content-Type", MediaType.APPLICATION_JSON_VALUE))
 				.andExpect(content().json("""
 						{
 						  "assistant_id": "clio_agent",

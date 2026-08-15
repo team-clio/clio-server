@@ -42,6 +42,10 @@ Spring은 같은 프로젝트의 `(request_id, request_hash)`를 멱등하게 �
 `NEEDS_REVIEW`, `INSUFFICIENT_EVIDENCE`는 업무 결과이므로 저장이 끝나면 실행은
 `COMPLETED`다.
 
+`PENDING → RUNNING` 요청에서 checkpoint를 생략하면 실행 claim으로 처리한다. 이미
+`RUNNING`인 실행에 같은 claim을 반복하면 `409`이며, 실행 중 checkpoint 갱신은
+`status=RUNNING`과 `latest_checkpoint`를 함께 보낸다.
+
 ## Bug 원문 조회
 
 ```json

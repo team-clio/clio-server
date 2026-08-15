@@ -96,8 +96,8 @@ public class AgentWorkflowRunService {
 	private void updateRunning(AgentWorkflowRun run, com.fasterxml.jackson.databind.JsonNode checkpoint) {
 		if (run.getStatus() == AgentWorkflowStatus.PENDING) {
 			run.start();
-		} else if (run.getStatus() != AgentWorkflowStatus.RUNNING) {
-			throw new ConflictException("A completed workflow cannot run again: " + run.getId());
+		} else if (run.getStatus() != AgentWorkflowStatus.RUNNING || checkpoint == null) {
+			throw new ConflictException("Workflow has already been claimed: " + run.getId());
 		}
 		if (checkpoint != null) {
 			run.checkpoint(checkpoint);

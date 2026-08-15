@@ -12,6 +12,8 @@ import ax.clio.issue.dto.IssueDetailResponse;
 import ax.clio.issue.dto.LinkBugToIssueRequest;
 import ax.clio.issue.service.InternalIssueQueryService;
 import ax.clio.issue.service.IssueLifecycleService;
+import ax.clio.bug.dto.AgentBugResponse;
+import ax.clio.bug.service.BugService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InternalIssueController {
 	private final InternalIssueQueryService issueQueryService;
 	private final IssueLifecycleService issueLifecycleService;
+	private final BugService bugService;
 
 	@PostMapping("/issues")
 	public ResponseEntity<IssueBugLifecycleResponse> create(
@@ -54,6 +57,11 @@ public class InternalIssueController {
 	@GetMapping("/issues/{issueId}")
 	public IssueDetailResponse get(@PathVariable Long projectId, @PathVariable Long issueId) {
 		return issueQueryService.get(projectId, issueId);
+	}
+
+	@GetMapping("/issues/{issueId}/bugs/representative")
+	public AgentBugResponse representativeBug(@PathVariable Long projectId, @PathVariable Long issueId) {
+		return bugService.representativeForIssue(projectId, issueId);
 	}
 
 	@PostMapping("/candidate-bug-links")

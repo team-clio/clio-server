@@ -83,7 +83,9 @@ class AgentIntegrationLifecycleTest {
 								{
 								  "workflow_run_id": %d,
 								  "bug_id": %d,
-								  "confidence": 0.0
+								  "confidence": 0.0,
+								  "title": "저장된 검색이 실패합니다",
+								  "description": "## 증상\\n저장 요청이 실패합니다."
 								}
 								""".formatted(runId, bugId)))
 				.andExpect(status().isCreated())
@@ -91,6 +93,10 @@ class AgentIntegrationLifecycleTest {
 				.andExpect(jsonPath("$.bug_linked").value(true))
 				.andReturn().getResponse().getContentAsString());
 		long issueId = createdIssue.get("issue_id").asLong();
+		mockMvc.perform(get(external + "/issues/" + issueId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.title").value("저장된 검색이 실패합니다"))
+				.andExpect(jsonPath("$.summary").value("## 증상\n저장 요청이 실패합니다."));
 
 		mockMvc.perform(post(internal + "/issues")
 						.contentType(MediaType.APPLICATION_JSON)
@@ -154,6 +160,10 @@ class AgentIntegrationLifecycleTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"status\":\"COMPLETED\",\"result_snapshot\":{\"action\":\"link_existing\"}}"))
 				.andExpect(status().isOk());
+		mockMvc.perform(get(internal + "/issues/" + issueId + "/bugs/representative"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.bug_id").value(secondBugId))
+				.andExpect(jsonPath("$.message").value("same failure"));
 
 		mockMvc.perform(put(internal + "/workflow-runs/" + runId + "/analysis-result")
 						.contentType(MediaType.APPLICATION_JSON)
@@ -193,6 +203,10 @@ class AgentIntegrationLifecycleTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.workflow_run_id").value(runId))
 				.andExpect(jsonPath("$.issue_analysis.status").value("INSUFFICIENT_EVIDENCE"));
+		mockMvc.perform(get(external + "/issues/" + issueId + "/analysis-results/latest"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.workflowRunId").value(runId))
+				.andExpect(jsonPath("$.issueAnalysis.status").value("INSUFFICIENT_EVIDENCE"));
 	}
 
 	@Test
@@ -208,6 +222,12 @@ class AgentIntegrationLifecycleTest {
 		mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(body))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.id").value(first.get("id").asLong()));
+		String runPath = path + "/" + first.get("id").asLong();
+		String running = "{\"status\":\"RUNNING\"}";
+		mockMvc.perform(patch(runPath).contentType(MediaType.APPLICATION_JSON).content(running))
+				.andExpect(status().isOk());
+		mockMvc.perform(patch(runPath).contentType(MediaType.APPLICATION_JSON).content(running))
+				.andExpect(status().isConflict());
 		mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(
 						"{\"request_id\":\"REQ-SAME\",\"request_type\":\"document_added\",\"request_payload\":{\"document_id\":\"D2\"}}"))
 				.andExpect(status().isConflict());

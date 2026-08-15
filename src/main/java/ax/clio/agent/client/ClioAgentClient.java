@@ -1,12 +1,10 @@
 package ax.clio.agent.client;
 
-import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 @Component
 public class ClioAgentClient {
@@ -17,7 +15,11 @@ public class ClioAgentClient {
 
 	@Autowired
 	public ClioAgentClient(ClioAgentProperties properties) {
-		this(RestClient.builder(), properties);
+		// LangGraph's local Uvicorn server accepts HTTP/1.1, not h2c upgrades.
+		this(
+				RestClient.builder().requestFactory(new SimpleClientHttpRequestFactory()),
+				properties
+		);
 	}
 
 	ClioAgentClient(RestClient.Builder builder, ClioAgentProperties properties) {
@@ -25,32 +27,14 @@ public class ClioAgentClient {
 	}
 
 	public void processBug(Long projectId, Long bugId) {
-		GraphRequest graphRequest = new GraphRequest(
-				"process-bug-" + bugId,
-				PROCESS_REPORT,
-				projectId.toString(),
-				Map.of("bug_id", bugId.toString())
-		);
+		String body = """
+				{"assistant_id":"%s","input":{"request":{"request_id":"process-bug-%d","request_type":"%s","project_id":"%d","payload":{"bug_id":"%d"}}}}
+				""".formatted(ROOT_GRAPH_ID, bugId, PROCESS_REPORT, projectId, bugId);
 		restClient.post()
 				.uri("/runs")
-				.body(new RunRequest(ROOT_GRAPH_ID, Map.of("request", graphRequest)))
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(body)
 				.retrieve()
 				.toBodilessEntity();
-	}
-
-	@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-	private record RunRequest(
-			String assistantId,
-			Map<String, GraphRequest> input
-	) {
-	}
-
-	@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-	private record GraphRequest(
-			String requestId,
-			String requestType,
-			String projectId,
-			Map<String, String> payload
-	) {
 	}
 }

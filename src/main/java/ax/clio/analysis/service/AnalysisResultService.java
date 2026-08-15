@@ -2,6 +2,7 @@ package ax.clio.analysis.service;
 
 import ax.clio.analysis.dto.AnalysisResultResponse;
 import ax.clio.analysis.dto.LatestAnalysisResultResponse;
+import ax.clio.analysis.dto.LatestIssueAnalysisResponse;
 import ax.clio.analysis.dto.SaveAnalysisResultRequest;
 import ax.clio.analysis.entity.AnalysisResult;
 import ax.clio.analysis.entity.AnalysisResultStatus;
@@ -10,6 +11,7 @@ import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
 import ax.clio.issue.entity.Issue;
 import ax.clio.issue.repository.IssueRepository;
+import ax.clio.issue.service.RiskPriorityMapper;
 import ax.clio.workflow.entity.AgentWorkflowRun;
 import ax.clio.workflow.entity.AgentWorkflowStatus;
 import ax.clio.workflow.repository.AgentWorkflowRunRepository;
@@ -53,6 +55,7 @@ public class AnalysisResultService {
 				.orElseThrow(() -> new ResourceNotFoundException("Issue not found: " + request.issueId()));
 		AnalysisResult previous = resolvePrevious(projectId, issue, request.previousAnalysisResultId());
 		AnalysisResultStatus status = validateSnapshot(run, issue, previous, request.issueAnalysis());
+		applyRiskAssessment(issue, request.issueAnalysis());
 		return response(analysisResultRepository.save(AnalysisResult.create(
 				run, issue, previous, status, persistenceTree(request.issueAnalysis())
 		)));
@@ -70,6 +73,15 @@ public class AnalysisResultService {
 						objectMapper.readTree(result.getResultSnapshot().toString())
 				))
 				.orElse(null);
+	}
+
+	@Transactional(readOnly = true)
+	public LatestIssueAnalysisResponse latestForClient(Long projectId, Long issueId) {
+		LatestAnalysisResultResponse result = latest(projectId, issueId);
+		if (result == null) return null;
+		return new LatestIssueAnalysisResponse(
+				result.analysisResultId(), result.workflowRunId(), result.issueAnalysis()
+		);
 	}
 
 	private AnalysisResult resolvePrevious(Long projectId, Issue issue, Long previousId) {
@@ -113,6 +125,25 @@ public class AnalysisResultService {
 			requireId(revision, "previous_analysis_result_id", previous.getId());
 		}
 		return status;
+	}
+
+	private void applyRiskAssessment(Issue issue, JsonNode snapshot) {
+		JsonNode risk = snapshot.get("risk_assessment");
+		if (risk == null || risk.isNull()) {
+			return;
+		}
+		if (!risk.isObject()) {
+			throw new ConflictException("risk_assessment must be a JSON object.");
+		}
+		JsonNode scoreNode = risk.get("risk_score");
+		if (scoreNode == null || !scoreNode.isIntegralNumber()) {
+			throw new ConflictException("risk_assessment.risk_score must be an integer.");
+		}
+		int score = scoreNode.asInt();
+		if (score < 0 || score > 100) {
+			throw new ConflictException("risk_assessment.risk_score must be between 0 and 100.");
+		}
+		issue.applyRiskAssessment(score, RiskPriorityMapper.fromScore(score));
 	}
 
 	private void requireId(JsonNode snapshot, String field, Long expected) {
