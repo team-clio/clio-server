@@ -41,3 +41,11 @@
 - **이유**: Agent `RepositorySyncPayload` 계약이 `repository_id`/`branch`/`source_uri`를 요구하므로
   그대로 매핑하면 에이전트 수정 없이 동작한다. project_id는 request_id·요청 공통 필드로 전달된다.
 - **배제한 대안**: provider/owner/name 조합 식별자(Agent 계약과 불일치 → 에이전트 수정 필요).
+
+## D6. Agent 전송 방식
+
+- **결정**: A. `/runs` 비동기(fire-and-forget). `processBug`와 동일.
+- **이유**: repository 등록은 원격 clone·PCM ingest로 수 분이 걸릴 수 있어 동기 대기
+  (`/runs/wait`)는 HTTP 타임아웃 위험이 크다. 비동기 발행 후 `SYNCING` 상태로 두는 D3와 정합적이다.
+- **배제한 대안**: `/runs/wait`(타임아웃 위험, 정확한 완료 상태는 어차피 Agent 완료 통지가
+  있어야 하므로 이득이 제한적).
