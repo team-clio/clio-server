@@ -11,3 +11,14 @@
   - `ClioAgentClient`가 이미 에이전트 URL(:2024)을 알고 있으므로 중계에 필요한 인프라가 있다.
 - **제외한 대안**: admin이 에이전트 서버를 직접 호출(프록시 경로 추가) — admin이 두 origin을
   바라보게 되어 기존 패턴에서 벗어남.
+
+## D2. 에이전트 PCM read API 구현 방식
+
+- **결정**: standalone FastAPI 앱(`inspect_api.py`)을 추가하고 uvicorn으로 실행한다.
+- **이유**:
+  - LangGraph dev 서버(:2024)의 `/runs`·`/runs/wait` 구조를 건드리지 않는다.
+  - `PostgresPCM`을 직접 주입해 기존 읽기 로직(`read_knowledge`, `search_knowledge`)을
+    재사용한다.
+  - `langgraph build` 배포 이미지와 독립적으로 실행 가능하다.
+- **제외한 대안**: LangGraph 서버에 커스텀 라우터 추가 — 공식 지원이 제한적이고 배포
+  이미지에도 별도 구성이 필요해 리스크가 크다.
