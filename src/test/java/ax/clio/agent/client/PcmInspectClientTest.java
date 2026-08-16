@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import ax.clio.common.PcmInspectUnavailableException;
 import ax.clio.common.ResourceNotFoundException;
 
 class PcmInspectClientTest {
@@ -112,6 +113,27 @@ class PcmInspectClientTest {
 		assertThrows(
 				ResourceNotFoundException.class,
 				() -> client.readKnowledge("3", "kn_x")
+		);
+		server.verify();
+	}
+
+	@Test
+	void mapsUpstreamServerErrorToUnavailableException() {
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		PcmInspectClient client = new PcmInspectClient(
+				builder,
+				new PcmInspectProperties(URI.create("http://agent-inspect:2025"))
+		);
+		server.expect(once(), requestTo("http://agent-inspect:2025/pcm/projects/3/knowledge"))
+				.andExpect(method(HttpMethod.GET))
+				.andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).body(
+						"{\"detail\":\"PCM inspect unavailable.\"}"
+				));
+
+		assertThrows(
+				PcmInspectUnavailableException.class,
+				() -> client.listKnowledge("3")
 		);
 		server.verify();
 	}
