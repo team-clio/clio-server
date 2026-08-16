@@ -93,7 +93,7 @@ public class AnalysisResultService {
 		}
 		AnalysisResult result = analysisResultRepository.findFirstByIssueIdOrderByCreatedAtDesc(issueId).orElse(null);
 		if (result == null) return java.util.Map.of("files", java.util.List.of(), "available", false);
-		com.fasterxml.jackson.databind.JsonNode citations = result.getResultSnapshot().path("citations");
+		com.fasterxml.jackson.databind.JsonNode citations = result.getResultSnapshot().path("evidence");
 		java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
 		for (com.fasterxml.jackson.databind.JsonNode citation : citations) {
 			if (!citation.hasNonNull("repository_id") || !citation.hasNonNull("commit")
