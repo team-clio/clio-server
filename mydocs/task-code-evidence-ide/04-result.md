@@ -15,7 +15,8 @@
 - E2E: 독립 Project 3을 만들고 sandbox-order-service를 commit `d0221f4fe44bde7d5b390cccc50809ec0e11f21a`로 동기화했다. External Bug API로 pagination 결함을 수집해 `process_report`가 Issue 11과 `COMPLETED` 분석을 생성하는 것을 확인했다.
 - E2E: `GET /external-api/v1/projects/3/issues/11/analysis-results/latest/code-evidence`가 `pagination_service.py`와 `test_order_service.py`의 고정 commit 발췌, 줄 범위, AI 관찰을 반환했다.
 - UI E2E: Orca 내장 브라우저에서 Project 3의 Issue 11을 열고 `코드 근거` 탭을 확인했다. 파일 트리의 두 파일을 각각 선택해 commit, 줄 번호, 코드 발췌와 AI 설명이 전환되어 표시되는 것을 확인했다.
-- UI 보완: 코드 근거 탭만 상세 패널의 일반 콘텐츠 폭 제한을 해제하고, 화면 높이를 사용하도록 확장했다.
+- UI 보완: 코드 근거 탭을 `max-w-6xl` 안의 2열 작업 영역으로 조정했다. 최소 높이는 34rem으로 제한하고, 기존 화면과 같은 흰 배경·slate 경계·clio 강조색을 사용한다.
+- UI 재검증: Orca 내장 브라우저에서 작업 영역이 1,088px × 544px로 렌더링되고, 두 파일을 전환할 때 코드와 AI 주석이 갱신되는 것을 확인했다.
 
 ## E2E 해석과 남은 과제
 
