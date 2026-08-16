@@ -33,3 +33,13 @@
   - inspect 화면의 핵심(무엇이 저장되어 있는가)을 최소 범위로 충족한다.
   - 검색은 `search_knowledge`가 Ollama embedding 의존이라 inspect 화면과 결이 다르고,
     구현·테스트 범위가 커진다. tombstone·검색은 2차로 미룬다.
+
+## D4. UI 구조
+
+- **결정**: 단일 페이지의 목록 + 상세 패널 구조로 한다.
+  - 상단: snapshot 요약(active revision, index revision)
+  - 왼쪽: Knowledge 목록(테이블) — logical_key, type, title, revision, 유효 범위
+  - 오른쪽: 선택한 Knowledge 상세 — body markdown, sources, related ids, revision
+- **이유**: 1차 범위 데이터 규모가 작아 한 화면으로 충분하다. 행 선택과 상세가 같은 화면에서
+  연결되어 이동 비용이 없다.
+- **제외한 대안**: 목록→상세 이동(이동 비용 추가), 탭 구조(검색 미포함 1차 범위에 과함).
