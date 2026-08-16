@@ -32,6 +32,19 @@ public class GlobalExceptionHandler {
 		return response(HttpStatus.CONFLICT, "CONFLICT", exception.getMessage(), request);
 	}
 
+	@ExceptionHandler(PcmInspectUnavailableException.class)
+	public ResponseEntity<ApiErrorResponse> handlePcmInspectUnavailable(
+			PcmInspectUnavailableException exception,
+			HttpServletRequest request
+	) {
+		return response(
+				HttpStatus.SERVICE_UNAVAILABLE,
+				"PCM_INSPECT_UNAVAILABLE",
+				exception.getMessage(),
+				request
+		);
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiErrorResponse> handleValidation(
 			MethodArgumentNotValidException exception,

@@ -7,8 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestClient;
 
+import ax.clio.common.PcmInspectUnavailableException;
 import ax.clio.common.ResourceNotFoundException;
 
 /**
@@ -55,6 +58,16 @@ public class PcmInspectClient {
 			return body == null ? Map.of() : body;
 		} catch (HttpClientErrorException.NotFound exception) {
 			throw new ResourceNotFoundException("PCM resource not found: " + path);
+		} catch (RestClientResponseException exception) {
+			throw new PcmInspectUnavailableException(
+					"PCM inspect service is unavailable at " + path,
+					exception
+			);
+		} catch (ResourceAccessException exception) {
+			throw new PcmInspectUnavailableException(
+					"PCM inspect service is unreachable at " + path,
+					exception
+			);
 		}
 	}
 
@@ -68,6 +81,16 @@ public class PcmInspectClient {
 			return body == null ? List.of() : body;
 		} catch (HttpClientErrorException.NotFound exception) {
 			throw new ResourceNotFoundException("PCM resource not found: " + path);
+		} catch (RestClientResponseException exception) {
+			throw new PcmInspectUnavailableException(
+					"PCM inspect service is unavailable at " + path,
+					exception
+			);
+		} catch (ResourceAccessException exception) {
+			throw new PcmInspectUnavailableException(
+					"PCM inspect service is unreachable at " + path,
+					exception
+			);
 		}
 	}
 }
