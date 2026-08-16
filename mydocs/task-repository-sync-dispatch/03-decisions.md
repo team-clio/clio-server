@@ -26,3 +26,10 @@
   이번 범위에서는 미기입으로 둔다.
 - **배제한 대안**: 낙관적 `SYNCED`(실제 완료와 다를 수 있음), 실패만 기록(발행 여부를 UI에서
   알 수 없음).
+
+## D4. `request_id` 형식
+
+- **결정**: A. `repository-{projectId}-{sourceId}` (예: `repository-7-42`)
+- **이유**: 프로젝트 경계에서도 유일하고 로그·에러 메시지에서 식별이 쉽다. 기존 `process-bug-{id}`
+  패턴과 일관된다.
+- **배제한 대안**: `repository-{sourceId}`(projectId 없음 → 프로젝트 경계 충돌 가능), UUID(추적성 낮음).
