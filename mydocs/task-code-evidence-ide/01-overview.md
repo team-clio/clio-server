@@ -12,11 +12,13 @@
 - 선택한 파일에서 AI citation 위치와 관련 설명을 확인한다.
 - 긴 파일은 citation 주변 구간만 표시하고, 생략된 구간을 구분한다.
 - 표시 대상은 분석 당시의 고정 repository commit이어야 한다.
+- 분석 결과가 화면 하이라이트에 필요한 구조화된 코드 근거를 항상 제공하도록 한다.
 
 ## 현재 상태와 제약
 
 - Admin은 `analysis-results/latest`의 `issueAnalysis.evidence`만 받는다.
 - citation에는 저장소 ID, commit, 경로 또는 위치, 스니펫이 있을 수 있으나 파일 트리와 원문 전체는 없다.
+- 현재 citation의 위치는 문자열일 수 있어, 파일 경로와 시작·끝 줄을 안정적으로 분리하거나 여러 근거를 연결하기 어렵다. snapshot 일치 여부는 검사하지만 UI용 위치 메타데이터의 완전성은 보장하지 않는다.
 - Agent Graph에는 고정 snapshot 기준으로 파일 목록을 조회하고 제한된 줄 범위를 읽는 기능이 있다. 현재 브라우저가 호출할 HTTP 계약은 없다.
 - Spring은 Issue와 분석 결과의 소유자다. 새 조회 흐름도 Spring 외부 API를 통해 제공하고, Agent Graph의 repository mirror를 Spring이 직접 읽지 않도록 해야 한다.
 
@@ -25,6 +27,7 @@
 - `clio-admin`: 코드 근거 탭의 IDE형 레이아웃, 파일 트리, citation 하이라이트, 생략 구간 UI.
 - `clio-server`: 이슈·분석 결과 권한과 snapshot을 검증하는 외부 조회 API 및 Agent 호출 경계.
 - `clio-agent-graph`: 고정 snapshot의 파일 목록·부분 원문을 제공하는 읽기 전용 계약. 실제 필요 여부와 계약 형태는 계획 단계에서 확정한다.
+- `clio-agent-graph` 및 분석 결과 계약: 코드 citation의 식별자, 저장소·commit, 파일 경로, 줄 범위, AI 설명 및 하이라이트 대상의 완전성을 검증한다.
 
 ## 미정 사항
 
@@ -32,6 +35,7 @@
 - 초기 화면을 citation 주변 발췌만 보일지, 사용자가 추가 구간을 펼칠 수 있게 할지
 - 파일 원문을 조회하는 API의 페이지·줄 범위·최대 크기·비밀 파일 차단 정책
 - 하나의 파일에 여러 citation이 있을 때의 선택 및 하이라이트 방식
+- 코드 citation에 어떤 필드를 필수로 하고, 누락 또는 검증 불가한 근거를 어떻게 처리할지
 
 ## 범위 제외
 
