@@ -16,3 +16,13 @@
   바뀌면 기존 mirror는 stale하므로 재동기화 필요를 `PENDING`으로 표현하고, 정확한 동기화는
   후속 작업(active commit 컬럼)에서 `repository_changed`로 처리한다.
 - **배제한 대안**: remove+add 재등록(이벤트 두 번·재클론 비용), 이번 범위에서 컬럼 추가(범위 확장).
+
+## D3. `sync_status` 전이 범위
+
+- **결정**: A. 디스패치 성공 시 `SYNCING`, 실패 시 `FAILED`. `SYNCED`는 후속 작업으로 미룬다.
+- **이유**: `SYNCED`는 Agent가 mirror/PCM 작업을 끝냈을 때만 정확한데, 현재 repository sync
+  그래프는 workflow-run 완료 통지를 Spring에 보내지 않는다(검토 시 확인된 갭). 전송 성공까지가
+  이번 범위에서 Spring이 보장할 수 있는 경계다. `last_synced_at`은 `SYNCED` 전이 시 채우므로
+  이번 범위에서는 미기입으로 둔다.
+- **배제한 대안**: 낙관적 `SYNCED`(실제 완료와 다를 수 있음), 실패만 기록(발행 여부를 UI에서
+  알 수 없음).
