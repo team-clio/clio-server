@@ -49,3 +49,22 @@
   (`/runs/wait`)는 HTTP 타임아웃 위험이 크다. 비동기 발행 후 `SYNCING` 상태로 두는 D3와 정합적이다.
 - **배제한 대안**: `/runs/wait`(타임아웃 위험, 정확한 완료 상태는 어차피 Agent 완료 통지가
   있어야 하므로 이득이 제한적).
+
+## F1. `repository_removed`는 상태 전이 생략 (D3 보완)
+
+- **결정**: `repository_removed` 디스패치는 성공/실패 모두 `sync_status`를 갱신하지 않는다.
+- **이유**: 제거 이벤트는 트랜잭션 커밋 후 처리되는데 그 시점에 `project_sources` row가 이미
+  삭제되어 `markSyncing/markFailed`가 `ResourceNotFoundException`이 된다. 남은 row가 없으므로
+  기록할 상태도 없다. 등록(`repository_added`)에만 `SYNCING/FAILED`를 적용한다.
+
+## F2. AFTER_COMMIT 리스너 내부 쓰기 트랜잭션 유실 → REQUIRES_NEW (구현 중 발견)
+
+- **문제**: `@TransactionalEventListener(AFTER_COMMIT)` 콜백이 실행되는 시점에는 외부 트랜잭션이
+  이미 commit됐지만 `TransactionSynchronizationManager`의 바인딩이 정리되기 전이다. 이때 시작한
+  `REQUIRED` 트랜잭션은 **외부(이미 커밋된) 트랜잭션에 참여**해버려, 디스패처가 `SYNCING`을
+  저장해도 커밋이 유실된다(통합 테스트로 재현: 저장 직후 재조회 시 `PENDING`).
+- **결정**: `markRepositorySyncing`/`markRepositorySyncFailed`를 `REQUIRES_NEW`로 변경해
+  새 연결·새 트랜잭션에서 커밋되도록 한다. 통합 테스트가 `SYNCING` 반영을 검증한다.
+- **후속 확인 필요**: `BugCollectedAgentDispatcher`의 `markAnalyzing`도 동일 패턴이라 같은
+  유실이 잠재돼 있을 수 있다(기존 테스트는 DB 상태를 검증하지 않아 미발견). 이번 작업 범위 밖으로
+  두고 후속에서 확인한다.

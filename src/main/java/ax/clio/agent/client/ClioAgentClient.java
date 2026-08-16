@@ -5,6 +5,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +33,36 @@ public class ClioAgentClient {
 		String body = """
 				{"assistant_id":"%s","input":{"request":{"request_id":"process-bug-%d","request_type":"%s","project_id":"%d","payload":{"bug_id":"%d"}}}}
 				""".formatted(ROOT_GRAPH_ID, bugId, PROCESS_REPORT, projectId, bugId);
+		restClient.post()
+				.uri("/runs")
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(body)
+				.retrieve()
+				.toBodilessEntity();
+	}
+
+	public void dispatchRepositorySync(
+			Long projectId,
+			Long sourceId,
+			RepositorySyncRequestType requestType,
+			String branch,
+			String sourceUri
+	) {
+		Map<String, Object> payload = new LinkedHashMap<>();
+		payload.put("repository_id", sourceId.toString());
+		payload.put("branch", branch);
+		if (sourceUri != null) {
+			payload.put("source_uri", sourceUri);
+		}
+		Map<String, Object> body = Map.of(
+				"assistant_id", ROOT_GRAPH_ID,
+				"input", Map.of("request", Map.of(
+						"request_id", "repository-" + projectId + "-" + sourceId,
+						"request_type", requestType.wireName(),
+						"project_id", projectId.toString(),
+						"payload", payload
+				))
+		);
 		restClient.post()
 				.uri("/runs")
 				.contentType(MediaType.APPLICATION_JSON)
