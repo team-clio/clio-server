@@ -43,3 +43,12 @@
 - **이유**: 1차 범위 데이터 규모가 작아 한 화면으로 충분하다. 행 선택과 상세가 같은 화면에서
   연결되어 이동 비용이 없다.
 - **제외한 대안**: 목록→상세 이동(이동 비용 추가), 탭 구조(검색 미포함 1차 범위에 과함).
+
+## D5. project_id 매핑
+
+- **결정**: PCM project_id = Spring `project.id`의 문자열 표현(`String(projectId)`)을 그대로
+  사용한다.
+- **이유**: `ClioAgentClient`가 이미 `projectId.toString()`으로 직렬화해 에이전트에 디스패치하므로
+  동일 매핑이면 변환 로직이 필요 없다. admin에서 선택한 `projectId`(number)를 그대로 넘기면 된다.
+- **제외한 대안**: Spring에 PCM project_id 전용 칼럼 추가 — Spring이 PCM을 알게 되어 소유권
+  경계를 위반하고 기존 디스패치와 다른 매핑이 생긴다.
