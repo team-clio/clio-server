@@ -22,3 +22,14 @@
   - `langgraph build` 배포 이미지와 독립적으로 실행 가능하다.
 - **제외한 대안**: LangGraph 서버에 커스텀 라우터 추가 — 공식 지원이 제한적이고 배포
   이미지에도 별도 구성이 필요해 리스크가 크다.
+
+## D3. PCM API 1차 범위
+
+- **결정**: snapshot 조회 + Knowledge 목록 + Knowledge 상세를 1차 범위로 한다.
+  - `GET /pcm/projects/{project_id}/snapshot` — active revision + index revision
+  - `GET /pcm/projects/{project_id}/knowledge` — Knowledge 목록(현재 유효분)
+  - `GET /pcm/projects/{project_id}/knowledge/{knowledge_id}` — 상세(body, sources, revision)
+- **이유**:
+  - inspect 화면의 핵심(무엇이 저장되어 있는가)을 최소 범위로 충족한다.
+  - 검색은 `search_knowledge`가 Ollama embedding 의존이라 inspect 화면과 결이 다르고,
+    구현·테스트 범위가 커진다. tombstone·검색은 2차로 미룬다.
