@@ -33,3 +33,11 @@
 - **이유**: 프로젝트 경계에서도 유일하고 로그·에러 메시지에서 식별이 쉽다. 기존 `process-bug-{id}`
   패턴과 일관된다.
 - **배제한 대안**: `repository-{sourceId}`(projectId 없음 → 프로젝트 경계 충돌 가능), UUID(추적성 낮음).
+
+## D5. payload 식별자 매핑
+
+- **결정**: A. `repository_id`=`project_sources.id`, `branch`=`target_branch`,
+  `source_uri`=`repo_url` (모두 문자열 직렬화)
+- **이유**: Agent `RepositorySyncPayload` 계약이 `repository_id`/`branch`/`source_uri`를 요구하므로
+  그대로 매핑하면 에이전트 수정 없이 동작한다. project_id는 request_id·요청 공통 필드로 전달된다.
+- **배제한 대안**: provider/owner/name 조합 식별자(Agent 계약과 불일치 → 에이전트 수정 필요).
