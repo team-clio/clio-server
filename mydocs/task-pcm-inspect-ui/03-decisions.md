@@ -1,0 +1,69 @@
+# PCM 메모리 inspect 화면 — 결정 기록
+
+## D1. PCM 조회 API 노출 위치
+
+- **결정**: Spring에 중계(relay) API를 구현하고, 에이전트 서버에 PCM read API를 추가한다.
+- **흐름**: `clio-admin → Spring 중계 API (:8080) → 에이전트 PCM read API (:2024) → PostgresPCM`
+- **이유**:
+  - admin은 기존처럼 vite proxy를 통해 Spring(:8080)만 바라봐도 된다. 단일 origin 유지.
+  - Spring은 PCM 데이터를 해석하지 않고 요청·응답을 그대로 중계하므로, "Spring이 PCM을 모른다"는
+    소유권 원칙을 지킨다. PCM 데이터를 읽는 구현은 여전히 에이전트 소유다.
+  - `ClioAgentClient`가 이미 에이전트 URL(:2024)을 알고 있으므로 중계에 필요한 인프라가 있다.
+- **제외한 대안**: admin이 에이전트 서버를 직접 호출(프록시 경로 추가) — admin이 두 origin을
+  바라보게 되어 기존 패턴에서 벗어남.
+
+## D2. 에이전트 PCM read API 구현 방식
+
+- **결정**: standalone FastAPI 앱(`inspect_api.py`)을 추가하고 uvicorn으로 실행한다.
+- **이유**:
+  - LangGraph dev 서버(:2024)의 `/runs`·`/runs/wait` 구조를 건드리지 않는다.
+  - `PostgresPCM`을 직접 주입해 기존 읽기 로직(`read_knowledge`, `search_knowledge`)을
+    재사용한다.
+  - `langgraph build` 배포 이미지와 독립적으로 실행 가능하다.
+- **제외한 대안**: LangGraph 서버에 커스텀 라우터 추가 — 공식 지원이 제한적이고 배포
+  이미지에도 별도 구성이 필요해 리스크가 크다.
+
+## D3. PCM API 1차 범위
+
+- **결정**: snapshot 조회 + Knowledge 목록 + Knowledge 상세를 1차 범위로 한다.
+  - `GET /pcm/projects/{project_id}/snapshot` — active revision + index revision
+  - `GET /pcm/projects/{project_id}/knowledge` — Knowledge 목록(현재 유효분)
+  - `GET /pcm/projects/{project_id}/knowledge/{knowledge_id}` — 상세(body, sources, revision)
+- **이유**:
+  - inspect 화면의 핵심(무엇이 저장되어 있는가)을 최소 범위로 충족한다.
+  - 검색은 `search_knowledge`가 Ollama embedding 의존이라 inspect 화면과 결이 다르고,
+    구현·테스트 범위가 커진다. tombstone·검색은 2차로 미룬다.
+
+## D4. UI 구조
+
+- **결정**: 단일 페이지의 목록 + 상세 패널 구조로 한다.
+  - 상단: snapshot 요약(active revision, index revision)
+  - 왼쪽: Knowledge 목록(테이블) — logical_key, type, title, revision, 유효 범위
+  - 오른쪽: 선택한 Knowledge 상세 — body markdown, sources, related ids, revision
+- **이유**: 1차 범위 데이터 규모가 작아 한 화면으로 충분하다. 행 선택과 상세가 같은 화면에서
+  연결되어 이동 비용이 없다.
+- **제외한 대안**: 목록→상세 이동(이동 비용 추가), 탭 구조(검색 미포함 1차 범위에 과함).
+
+## D5. project_id 매핑
+
+- **결정**: PCM project_id = Spring `project.id`의 문자열 표현(`String(projectId)`)을 그대로
+  사용한다.
+- **이유**: `ClioAgentClient`가 이미 `projectId.toString()`으로 직렬화해 에이전트에 디스패치하므로
+  동일 매핑이면 변환 로직이 필요 없다. admin에서 선택한 `projectId`(number)를 그대로 넘기면 된다.
+- **제외한 대안**: Spring에 PCM project_id 전용 칼럼 추가 — Spring이 PCM을 알게 되어 소유권
+  경계를 위반하고 기존 디스패치와 다른 매핑이 생긴다.
+
+## D6. 구현 순서
+
+- **결정**: 에이전트 PCM read API → Spring 중계 API → admin 화면 순으로 구현한다.
+- **이유**: 에이전트 API의 Pydantic 응답 모델이 Spring 중계 API의 타입과 admin 화면 타입의
+  기준이 된다. 아래에서 위로 계약을 확정하면 중간 단계 재작업이 줄어든다.
+- **제외한 대안**: 화면 먼저(계약 변경 시 재작업), 함께 진행(커밋 단위가 흐려짐).
+
+## F1. 의존성 추가 (D2 후속)
+
+- **결정**: D2(standalone FastAPI 앱)의 필연적 후속으로 `fastapi`와 `uvicorn`을
+  clio-agent-graph의 런타임 의존성에 추가한다. 테스트에는 `httpx`(TestClient)를 dev
+  의존성에 추가한다.
+- **이유**: D2에서 선택한 구현 방식이 FastAPI 기반 서버를 전제하므로 별도 결정이 아니라
+  필연적 후속이다.
