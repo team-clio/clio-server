@@ -10,8 +10,17 @@ D6 순서대로 세 저장소에 구현을 마쳤다.
 | clio-agent-graph | README에 inspect API 실행 문서 | `ce121b5` |
 | clio-server | PCM 중계 API (properties/client/service/controller) | `fb1b436` |
 | clio-admin | PCM 메모리 inspect 화면 + API client + hooks | `869b09c` |
+| clio-admin | snapshot `repository_revisions` 타입 수정(string) | `1358781` |
 
 모두 `main`에서 분기한 `task/pcm-inspect-ui` 브랜치에서 커밋했다.
+
+### PR
+
+| 저장소 | PR |
+|---|---|
+| clio-agent-graph | https://github.com/team-clio/clio-agent-graph/pull/4 |
+| clio-server | https://github.com/team-clio/clio-server/pull/22 |
+| clio-admin | https://github.com/team-clio/clio-admin/pull/1 |
 
 ### 에이전트 PCM read API
 
