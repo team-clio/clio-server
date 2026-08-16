@@ -47,4 +47,85 @@ class ClioAgentClientTest {
 
 		server.verify();
 	}
+
+	@Test
+	void dispatchesRepositoryAddedToTheRootGraph() {
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		ClioAgentClient client = new ClioAgentClient(
+				builder,
+				new ClioAgentProperties(true, URI.create("http://agent:2024"))
+		);
+		server.expect(once(), requestTo("http://agent:2024/runs"))
+				.andExpect(method(HttpMethod.POST))
+				.andExpect(header("Content-Type", MediaType.APPLICATION_JSON_VALUE))
+				.andExpect(content().json("""
+						{
+						  "assistant_id": "clio_agent",
+						  "input": {
+						    "request": {
+						      "request_id": "repository-7-42",
+						      "request_type": "repository_added",
+						      "project_id": "7",
+						      "payload": {
+						        "repository_id": "42",
+						        "branch": "main",
+						        "source_uri": "https://git.example.internal/team/app.git"
+						      }
+						    }
+						  }
+						}
+						"""))
+				.andRespond(withSuccess("{\"run_id\":\"run-2\"}", MediaType.APPLICATION_JSON));
+
+		client.dispatchRepositorySync(
+				7L,
+				42L,
+				RepositorySyncRequestType.REPOSITORY_ADDED,
+				"main",
+				"https://git.example.internal/team/app.git"
+		);
+
+		server.verify();
+	}
+
+	@Test
+	void dispatchesRepositoryRemovedWithoutSourceUri() {
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		ClioAgentClient client = new ClioAgentClient(
+				builder,
+				new ClioAgentProperties(true, URI.create("http://agent:2024"))
+		);
+		server.expect(once(), requestTo("http://agent:2024/runs"))
+				.andExpect(method(HttpMethod.POST))
+				.andExpect(header("Content-Type", MediaType.APPLICATION_JSON_VALUE))
+				.andExpect(content().json("""
+						{
+						  "assistant_id": "clio_agent",
+						  "input": {
+						    "request": {
+						      "request_id": "repository-7-42",
+						      "request_type": "repository_removed",
+						      "project_id": "7",
+						      "payload": {
+						        "repository_id": "42",
+						        "branch": "main"
+						      }
+						    }
+						  }
+						}
+						"""))
+				.andRespond(withSuccess("{\"run_id\":\"run-3\"}", MediaType.APPLICATION_JSON));
+
+		client.dispatchRepositorySync(
+				7L,
+				42L,
+				RepositorySyncRequestType.REPOSITORY_REMOVED,
+				"main",
+				null
+		);
+
+		server.verify();
+	}
 }

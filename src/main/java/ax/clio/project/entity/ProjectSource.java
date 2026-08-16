@@ -112,6 +112,18 @@ public class ProjectSource {
 		this.enabled = enabled;
 	}
 
+	public void markSyncing() {
+		this.syncStatus = ProjectSourceSyncStatus.SYNCING;
+	}
+
+	public void markFailed() {
+		this.syncStatus = ProjectSourceSyncStatus.FAILED;
+	}
+
+	public void markPending() {
+		this.syncStatus = ProjectSourceSyncStatus.PENDING;
+	}
+
 	private static String requireText(String value, String field) {
 		if (value == null || value.isBlank()) {
 			throw new IllegalArgumentException(field + " must not be blank.");

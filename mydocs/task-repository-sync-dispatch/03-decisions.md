@@ -1,0 +1,70 @@
+# Repository Sync Dispatch — 결정 기록
+
+## D1. 디스패치 트리거 방식
+
+- **결정**: A. `ApplicationEventPublisher` + `@TransactionalEventListener(AFTER_COMMIT)`
+- **이유**: `BugCollectedAgentDispatcher`와 동일 패턴을 재사용한다. 트랜잭션 커밋 전에는
+  이벤트가 발행되지 않아 DB와 디스패치가 어긋나지 않고, 디스패치 실패가 원 트랜잭션을
+  깨지 않는다. `@ConditionalOnProperty("clio.agent.enabled")`로 로컬 개발 시 무해하다.
+- **배제한 대안**: 서비스 직접 호출(실패 시 트랜잭션 회수·재시도 경계 약함), Outbox(규모에 비해 과함).
+
+## D2. `updateRepository` 시 Agent 호출 여부
+
+- **결정**: A. `repository_changed`를 발행하지 않고 `sync_status`를 `PENDING`으로 복귀시킨다.
+- **이유**: `repository_changed`는 Agent 계약상 `before_commit`(현재 active commit)이 필수인데
+  `project_sources`에 해당 컬럼이 없고 설계 문서도 "추후 설계"로 명시했다. update로 branch/URL이
+  바뀌면 기존 mirror는 stale하므로 재동기화 필요를 `PENDING`으로 표현하고, 정확한 동기화는
+  후속 작업(active commit 컬럼)에서 `repository_changed`로 처리한다.
+- **배제한 대안**: remove+add 재등록(이벤트 두 번·재클론 비용), 이번 범위에서 컬럼 추가(범위 확장).
+
+## D3. `sync_status` 전이 범위
+
+- **결정**: A. 디스패치 성공 시 `SYNCING`, 실패 시 `FAILED`. `SYNCED`는 후속 작업으로 미룬다.
+- **이유**: `SYNCED`는 Agent가 mirror/PCM 작업을 끝냈을 때만 정확한데, 현재 repository sync
+  그래프는 workflow-run 완료 통지를 Spring에 보내지 않는다(검토 시 확인된 갭). 전송 성공까지가
+  이번 범위에서 Spring이 보장할 수 있는 경계다. `last_synced_at`은 `SYNCED` 전이 시 채우므로
+  이번 범위에서는 미기입으로 둔다.
+- **배제한 대안**: 낙관적 `SYNCED`(실제 완료와 다를 수 있음), 실패만 기록(발행 여부를 UI에서
+  알 수 없음).
+
+## D4. `request_id` 형식
+
+- **결정**: A. `repository-{projectId}-{sourceId}` (예: `repository-7-42`)
+- **이유**: 프로젝트 경계에서도 유일하고 로그·에러 메시지에서 식별이 쉽다. 기존 `process-bug-{id}`
+  패턴과 일관된다.
+- **배제한 대안**: `repository-{sourceId}`(projectId 없음 → 프로젝트 경계 충돌 가능), UUID(추적성 낮음).
+
+## D5. payload 식별자 매핑
+
+- **결정**: A. `repository_id`=`project_sources.id`, `branch`=`target_branch`,
+  `source_uri`=`repo_url` (모두 문자열 직렬화)
+- **이유**: Agent `RepositorySyncPayload` 계약이 `repository_id`/`branch`/`source_uri`를 요구하므로
+  그대로 매핑하면 에이전트 수정 없이 동작한다. project_id는 request_id·요청 공통 필드로 전달된다.
+- **배제한 대안**: provider/owner/name 조합 식별자(Agent 계약과 불일치 → 에이전트 수정 필요).
+
+## D6. Agent 전송 방식
+
+- **결정**: A. `/runs` 비동기(fire-and-forget). `processBug`와 동일.
+- **이유**: repository 등록은 원격 clone·PCM ingest로 수 분이 걸릴 수 있어 동기 대기
+  (`/runs/wait`)는 HTTP 타임아웃 위험이 크다. 비동기 발행 후 `SYNCING` 상태로 두는 D3와 정합적이다.
+- **배제한 대안**: `/runs/wait`(타임아웃 위험, 정확한 완료 상태는 어차피 Agent 완료 통지가
+  있어야 하므로 이득이 제한적).
+
+## F1. `repository_removed`는 상태 전이 생략 (D3 보완)
+
+- **결정**: `repository_removed` 디스패치는 성공/실패 모두 `sync_status`를 갱신하지 않는다.
+- **이유**: 제거 이벤트는 트랜잭션 커밋 후 처리되는데 그 시점에 `project_sources` row가 이미
+  삭제되어 `markSyncing/markFailed`가 `ResourceNotFoundException`이 된다. 남은 row가 없으므로
+  기록할 상태도 없다. 등록(`repository_added`)에만 `SYNCING/FAILED`를 적용한다.
+
+## F2. AFTER_COMMIT 리스너 내부 쓰기 트랜잭션 유실 → REQUIRES_NEW (구현 중 발견)
+
+- **문제**: `@TransactionalEventListener(AFTER_COMMIT)` 콜백이 실행되는 시점에는 외부 트랜잭션이
+  이미 commit됐지만 `TransactionSynchronizationManager`의 바인딩이 정리되기 전이다. 이때 시작한
+  `REQUIRED` 트랜잭션은 **외부(이미 커밋된) 트랜잭션에 참여**해버려, 디스패처가 `SYNCING`을
+  저장해도 커밋이 유실된다(통합 테스트로 재현: 저장 직후 재조회 시 `PENDING`).
+- **결정**: `markRepositorySyncing`/`markRepositorySyncFailed`를 `REQUIRES_NEW`로 변경해
+  새 연결·새 트랜잭션에서 커밋되도록 한다. 통합 테스트가 `SYNCING` 반영을 검증한다.
+- **후속 확인 필요**: `BugCollectedAgentDispatcher`의 `markAnalyzing`도 동일 패턴이라 같은
+  유실이 잠재돼 있을 수 있다(기존 테스트는 DB 상태를 검증하지 않아 미발견). 이번 작업 범위 밖으로
+  두고 후속에서 확인한다.
