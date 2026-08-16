@@ -5,6 +5,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class ClioAgentClient {
@@ -36,5 +38,25 @@ public class ClioAgentClient {
 				.body(body)
 				.retrieve()
 				.toBodilessEntity();
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> readCodeEvidence(Long projectId, List<Map<String, Object>> citations) {
+		Map<String, Object> body = Map.of(
+				"assistant_id", ROOT_GRAPH_ID,
+				"input", Map.of("request", Map.of(
+						"request_id", "code-evidence-" + projectId,
+						"request_type", "read_code_evidence",
+						"project_id", projectId.toString(),
+						"payload", Map.of("citations", citations)
+				))
+		);
+		Map<String, Object> response = restClient.post()
+				.uri("/runs/wait")
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(body)
+				.retrieve()
+				.body(Map.class);
+		return response == null ? Map.of() : response;
 	}
 }

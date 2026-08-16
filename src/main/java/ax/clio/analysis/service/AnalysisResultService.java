@@ -7,6 +7,7 @@ import ax.clio.analysis.dto.SaveAnalysisResultRequest;
 import ax.clio.analysis.entity.AnalysisResult;
 import ax.clio.analysis.entity.AnalysisResultStatus;
 import ax.clio.analysis.repository.AnalysisResultRepository;
+import ax.clio.agent.client.ClioAgentClient;
 import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
 import ax.clio.issue.entity.Issue;
@@ -31,6 +32,7 @@ public class AnalysisResultService {
 	private final AgentWorkflowRunRepository workflowRunRepository;
 	private final IssueRepository issueRepository;
 	private final ObjectMapper objectMapper;
+	private final ClioAgentClient agentClient;
 
 	@Transactional
 	public AnalysisResultResponse save(Long projectId, Long runId, SaveAnalysisResultRequest request) {
@@ -82,6 +84,35 @@ public class AnalysisResultService {
 		return new LatestIssueAnalysisResponse(
 				result.analysisResultId(), result.workflowRunId(), result.issueAnalysis()
 		);
+	}
+
+	@Transactional(readOnly = true)
+	public java.util.Map<String, Object> codeEvidence(Long projectId, Long issueId) {
+		if (!issueRepository.existsByIdAndProjectId(issueId, projectId)) {
+			throw new ResourceNotFoundException("Issue not found: " + issueId);
+		}
+		AnalysisResult result = analysisResultRepository.findFirstByIssueIdOrderByCreatedAtDesc(issueId).orElse(null);
+		if (result == null) return java.util.Map.of("files", java.util.List.of(), "available", false);
+		com.fasterxml.jackson.databind.JsonNode citations = result.getResultSnapshot().path("citations");
+		java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+		for (com.fasterxml.jackson.databind.JsonNode citation : citations) {
+			if (!citation.hasNonNull("repository_id") || !citation.hasNonNull("commit")
+					|| !citation.hasNonNull("file_path") || !citation.has("start_line") || !citation.has("end_line")) continue;
+			items.add(java.util.Map.ofEntries(
+					java.util.Map.entry("evidence_id", citation.path("evidence_id").asText("citation-" + items.size())),
+					java.util.Map.entry("repository_id", citation.path("repository_id").asText()),
+					java.util.Map.entry("commit", citation.path("commit").asText()),
+					java.util.Map.entry("file_path", citation.path("file_path").asText()),
+					java.util.Map.entry("start_line", citation.path("start_line").asInt()),
+					java.util.Map.entry("end_line", citation.path("end_line").asInt()),
+					java.util.Map.entry("observation", citation.path("observation").asText(""))
+			));
+		}
+		if (items.isEmpty()) return java.util.Map.of("files", java.util.List.of(), "available", false);
+		java.util.Map<String, Object> state = agentClient.readCodeEvidence(projectId, items);
+		Object response = state.get("result");
+		if (response instanceof java.util.Map<?, ?> map) return (java.util.Map<String, Object>) map;
+		return java.util.Map.of("files", java.util.List.of(), "available", false);
 	}
 
 	private AnalysisResult resolvePrevious(Long projectId, Issue issue, Long previousId) {

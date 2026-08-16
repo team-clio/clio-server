@@ -25,4 +25,12 @@ public class ExternalAnalysisResultController {
 	) {
 		return ResponseEntity.ok(analysisResultService.latestForClient(projectId, issueId));
 	}
+
+	@GetMapping("/{issueId}/analysis-results/latest/code-evidence")
+	public ResponseEntity<java.util.Map<String, Object>> codeEvidence(
+			@PathVariable Long projectId,
+			@PathVariable Long issueId
+	) {
+		return ResponseEntity.ok(analysisResultService.codeEvidence(projectId, issueId));
+	}
 }
