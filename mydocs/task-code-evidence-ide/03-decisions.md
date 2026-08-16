@@ -19,3 +19,8 @@
 
 - 결정: 구조화된 위치가 없는 기존 결과는 IDE 보기 불가 안내 또는 기존 카드로 유지하고, 새 분석부터 IDE 뷰를 보장한다.
 - 근거: immutable 분석 snapshot을 조회 시 변환하지 않아 오해석을 피한다.
+
+## D5. 저장소 조회 경계
+
+- 결정: Admin은 Spring 외부 API만 호출하고, Spring이 Agent Graph의 읽기 전용 내부 계약을 호출한다.
+- 근거: Issue·분석 결과 권한과 고정 snapshot 검증을 Spring 소유 경계에 둔다.
