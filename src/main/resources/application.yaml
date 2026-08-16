@@ -17,3 +17,5 @@ clio:
   agent:
     enabled: ${CLIO_AGENT_ENABLED:true}
     url: ${CLIO_AGENT_URL:http://localhost:2024}
+  pcm-inspect:
+    url: ${CLIO_PCM_INSPECT_URL:http://localhost:2025}
