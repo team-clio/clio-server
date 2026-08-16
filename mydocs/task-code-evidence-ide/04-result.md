@@ -14,7 +14,8 @@
 - `clio-admin`: `npm run typecheck`, `npm run lint`, `npm run build` 통과.
 - E2E: 독립 Project 3을 만들고 sandbox-order-service를 commit `d0221f4fe44bde7d5b390cccc50809ec0e11f21a`로 동기화했다. External Bug API로 pagination 결함을 수집해 `process_report`가 Issue 11과 `COMPLETED` 분석을 생성하는 것을 확인했다.
 - E2E: `GET /external-api/v1/projects/3/issues/11/analysis-results/latest/code-evidence`가 `pagination_service.py`와 `test_order_service.py`의 고정 commit 발췌, 줄 범위, AI 관찰을 반환했다.
+- UI E2E: Orca 내장 브라우저에서 Project 3의 Issue 11을 열고 `코드 근거` 탭을 확인했다. 파일 트리의 두 파일을 각각 선택해 commit, 줄 번호, 코드 발췌와 AI 설명이 전환되어 표시되는 것을 확인했다.
 
 ## E2E 해석과 남은 과제
 
-기존 Project 1의 분석은 구조화 위치 필드가 없어 D4 정책대로 IDE 파일을 제공하지 않았다. 새 E2E 분석은 데이터 포함 API 경로를 통과했다. 이 환경에는 연결 가능한 브라우저가 없어 실제 Admin 화면의 자동 클릭·시각 확인은 수행하지 못했다. Agent Graph 테스트 의존성(`pytest`, `ruff`)은 현재 실행 환경에 설치되어 있지 않아 실행하지 못했고 Python 구문 컴파일로 확인했다.
+기존 Project 1의 분석은 구조화 위치 필드가 없어 D4 정책대로 IDE 파일을 제공하지 않았다. 새 E2E 분석은 데이터 포함 API와 Admin 화면 경로를 통과했다. Agent Graph 테스트 의존성(`pytest`, `ruff`)은 현재 실행 환경에 설치되어 있지 않아 실행하지 못했고 Python 구문 컴파일로 확인했다.
