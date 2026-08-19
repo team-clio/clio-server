@@ -32,6 +32,14 @@ public class GlobalExceptionHandler {
 		return response(HttpStatus.CONFLICT, "CONFLICT", exception.getMessage(), request);
 	}
 
+	@ExceptionHandler(UnprocessableContentException.class)
+	public ResponseEntity<ApiErrorResponse> handleUnprocessableContent(
+			UnprocessableContentException exception,
+			HttpServletRequest request
+	) {
+		return response(HttpStatus.UNPROCESSABLE_CONTENT, "UNPROCESSABLE_CONTENT", exception.getMessage(), request);
+	}
+
 	@ExceptionHandler(PcmInspectUnavailableException.class)
 	public ResponseEntity<ApiErrorResponse> handlePcmInspectUnavailable(
 			PcmInspectUnavailableException exception,

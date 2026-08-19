@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -169,5 +170,46 @@ class ProjectControllerTest {
 					.contentType(MediaType.APPLICATION_JSON).content(body))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("CONFLICT"));
+	}
+
+	@Test
+	void uploadsListsAndDeletesMarkdownDocuments() throws Exception {
+		Project project = projectRepository.save(Project.create("Clio Documents", null));
+		MockMultipartFile file = new MockMultipartFile(
+				"file", "architecture.md", "text/markdown", "# Architecture".getBytes()
+		);
+
+		String response = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart(
+						"/api/v1/projects/{projectId}/documents", project.getId())
+					.file(file)
+					.param("title", "Architecture"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.title").value("Architecture"))
+				.andExpect(jsonPath("$.originalFilename").value("architecture.md"))
+				.andReturn().getResponse().getContentAsString();
+		long documentId = new com.fasterxml.jackson.databind.ObjectMapper().readTree(response).get("id").asLong();
+
+		mockMvc.perform(get("/api/v1/projects/{projectId}/documents", project.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items.length()").value(1));
+
+		mockMvc.perform(delete("/api/v1/projects/{projectId}/documents/{documentId}", project.getId(), documentId))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	void rejectsDuplicateDocumentBytesWithinAProject() throws Exception {
+		Project project = projectRepository.save(Project.create("Clio Documents", null));
+		for (String title : java.util.List.of("First", "Second")) {
+			MockMultipartFile file = new MockMultipartFile("file", "same.md", "text/markdown", "# Same".getBytes());
+			var result = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart(
+						"/api/v1/projects/{projectId}/documents", project.getId())
+					.file(file).param("title", title));
+			if ("First".equals(title)) {
+				result.andExpect(status().isCreated());
+			} else {
+				result.andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONFLICT"));
+			}
+		}
 	}
 }
