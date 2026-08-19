@@ -28,6 +28,7 @@
 - 문서 생성·목록·삭제, 해시 중복 거절 Controller 테스트 통과
 - `npm run typecheck` 통과
 - `npm run lint` 통과
+- `npm run build` 통과
 
 ## 남은 과제
 
