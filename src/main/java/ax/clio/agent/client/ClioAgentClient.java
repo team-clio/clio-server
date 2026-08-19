@@ -71,6 +71,39 @@ public class ClioAgentClient {
 				.toBodilessEntity();
 	}
 
+	public void syncDocument(
+			Long projectId,
+			Long documentId,
+			DocumentSyncRequestType requestType,
+			String title,
+			String markdown,
+			Map<String, Object> sourceMetadata
+	) {
+		Map<String, Object> payload = new LinkedHashMap<>();
+		payload.put("document_id", documentId.toString());
+		payload.put("revision", "1");
+		if (requestType == DocumentSyncRequestType.DOCUMENT_ADDED) {
+			payload.put("title", title);
+			payload.put("markdown", markdown);
+			payload.put("source_metadata", sourceMetadata);
+		}
+		Map<String, Object> body = Map.of(
+				"assistant_id", ROOT_GRAPH_ID,
+				"input", Map.of("request", Map.of(
+						"request_id", "document-" + requestType.wireName() + "-" + projectId + "-" + documentId,
+						"request_type", requestType.wireName(),
+						"project_id", projectId.toString(),
+						"payload", payload
+				))
+		);
+		restClient.post()
+				.uri("/runs/wait")
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(body)
+				.retrieve()
+				.toBodilessEntity();
+	}
+
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> readCodeEvidence(Long projectId, List<Map<String, Object>> citations) {
 		Map<String, Object> body = Map.of(

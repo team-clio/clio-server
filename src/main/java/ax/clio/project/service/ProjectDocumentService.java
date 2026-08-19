@@ -8,6 +8,8 @@ import java.util.List;
 
 import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
+import ax.clio.agent.client.DocumentSyncRequestType;
+import ax.clio.agent.event.ProjectDocumentSyncEvent;
 import ax.clio.project.dto.ProjectDocumentResponse;
 import ax.clio.project.entity.Project;
 import ax.clio.project.entity.ProjectContext;
@@ -15,6 +17,7 @@ import ax.clio.project.repository.ProjectContextRepository;
 import ax.clio.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,6 +29,7 @@ public class ProjectDocumentService {
 	private final ProjectRepository projectRepository;
 	private final ProjectContextRepository projectContextRepository;
 	private final ProjectDocumentContentExtractor contentExtractor;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public List<ProjectDocumentResponse> getDocuments(Long projectId) {
 		requireProject(projectId);
@@ -53,12 +57,42 @@ public class ProjectDocumentService {
 		ProjectContext document = ProjectContext.createDocument(
 				project, title, markdown, originalFilename, mediaTypeOf(originalFilename), contentHash
 		);
-		return ProjectDocumentResponse.from(projectContextRepository.saveAndFlush(document));
+		document = projectContextRepository.saveAndFlush(document);
+		eventPublisher.publishEvent(new ProjectDocumentSyncEvent(
+				projectId, document.getId(), DocumentSyncRequestType.DOCUMENT_ADDED,
+				document.getTitle(), document.getContent(), document.getMediaType(), document.getOriginalFilename()
+		));
+		return ProjectDocumentResponse.from(document);
 	}
 
 	@Transactional
 	public void deleteDocument(Long projectId, Long documentId) {
 		requireProject(projectId);
+		ProjectContext document = requireDocument(projectId, documentId);
+		document.markDeleting();
+		eventPublisher.publishEvent(new ProjectDocumentSyncEvent(
+				projectId, document.getId(), DocumentSyncRequestType.DOCUMENT_DELETED,
+				null, null, null, null
+		));
+	}
+
+	@Transactional
+	public void markDocumentSyncing(Long projectId, Long documentId) {
+		requireDocument(projectId, documentId).markSyncing();
+	}
+
+	@Transactional
+	public void markDocumentSynced(Long projectId, Long documentId) {
+		requireDocument(projectId, documentId).markSynced();
+	}
+
+	@Transactional
+	public void markDocumentSyncFailed(Long projectId, Long documentId) {
+		requireDocument(projectId, documentId).markFailed();
+	}
+
+	@Transactional
+	public void completeDocumentDeletion(Long projectId, Long documentId) {
 		projectContextRepository.delete(requireDocument(projectId, documentId));
 	}
 

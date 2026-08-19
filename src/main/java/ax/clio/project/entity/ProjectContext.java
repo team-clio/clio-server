@@ -67,6 +67,10 @@ public class ProjectContext {
 	@Column(name = "content_hash", nullable = false, length = 71)
 	private String contentHash;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "sync_status", nullable = false, length = 20)
+	private ProjectDocumentSyncStatus syncStatus;
+
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -89,7 +93,24 @@ public class ProjectContext {
 		context.originalFilename = originalFilename;
 		context.mediaType = mediaType;
 		context.contentHash = contentHash;
+		context.syncStatus = ProjectDocumentSyncStatus.PENDING;
 		return context;
+	}
+
+	public void markSyncing() {
+		this.syncStatus = ProjectDocumentSyncStatus.SYNCING;
+	}
+
+	public void markSynced() {
+		this.syncStatus = ProjectDocumentSyncStatus.SYNCED;
+	}
+
+	public void markFailed() {
+		this.syncStatus = ProjectDocumentSyncStatus.FAILED;
+	}
+
+	public void markDeleting() {
+		this.syncStatus = ProjectDocumentSyncStatus.DELETING;
 	}
 
 	@PrePersist

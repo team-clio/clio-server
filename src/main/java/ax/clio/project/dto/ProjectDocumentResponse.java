@@ -3,6 +3,7 @@ package ax.clio.project.dto;
 import java.time.Instant;
 
 import ax.clio.project.entity.ProjectContext;
+import ax.clio.project.entity.ProjectDocumentSyncStatus;
 
 public record ProjectDocumentResponse(
 		Long id,
@@ -10,12 +11,13 @@ public record ProjectDocumentResponse(
 		String title,
 		String originalFilename,
 		String mediaType,
+		ProjectDocumentSyncStatus syncStatus,
 		Instant createdAt
 ) {
 	public static ProjectDocumentResponse from(ProjectContext document) {
 		return new ProjectDocumentResponse(
 				document.getId(), document.getProject().getId(), document.getTitle(),
-				document.getOriginalFilename(), document.getMediaType(), document.getCreatedAt()
+				document.getOriginalFilename(), document.getMediaType(), document.getSyncStatus(), document.getCreatedAt()
 		);
 	}
 }
