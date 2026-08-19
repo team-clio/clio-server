@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -76,22 +77,22 @@ public class ProjectDocumentService {
 		));
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void markDocumentSyncing(Long projectId, Long documentId) {
 		requireDocument(projectId, documentId).markSyncing();
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void markDocumentSynced(Long projectId, Long documentId) {
 		requireDocument(projectId, documentId).markSynced();
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void markDocumentSyncFailed(Long projectId, Long documentId) {
 		requireDocument(projectId, documentId).markFailed();
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void completeDocumentDeletion(Long projectId, Long documentId) {
 		projectContextRepository.delete(requireDocument(projectId, documentId));
 	}
