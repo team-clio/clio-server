@@ -16,6 +16,13 @@ public interface BugRepository extends JpaRepository<Bug, Long>, JpaSpecificatio
 
 	Optional<Bug> findByIdAndProjectId(Long id, Long projectId);
 
+	@Query("""
+			select bug.id from Bug bug
+			where bug.project.id = :projectId and bug.status = :status
+			order by bug.id
+			""")
+	List<Long> findIdsByProjectIdAndStatusOrderByIdAsc(Long projectId, ax.clio.bug.entity.BugStatus status);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select bug from Bug bug where bug.id = :id and bug.project.id = :projectId")
 	Optional<Bug> findByIdAndProjectIdForUpdate(Long id, Long projectId);

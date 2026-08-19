@@ -4,6 +4,7 @@ import java.util.List;
 
 import ax.clio.agent.client.RepositorySyncRequestType;
 import ax.clio.agent.event.RepositorySyncEvent;
+import ax.clio.agent.event.RepositorySyncCompletedEvent;
 import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
 import ax.clio.project.dto.CreateProjectRequest;
@@ -145,6 +146,12 @@ public class ProjectService {
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void markRepositorySyncFailed(Long projectId, Long repositoryId) {
 		findRepository(projectId, repositoryId).markFailed();
+	}
+
+	@Transactional
+	public void markRepositorySynced(Long projectId, Long repositoryId) {
+		findRepository(projectId, repositoryId).markSynced();
+		eventPublisher.publishEvent(new RepositorySyncCompletedEvent(projectId));
 	}
 
 	private Project requireProject(Long projectId) {

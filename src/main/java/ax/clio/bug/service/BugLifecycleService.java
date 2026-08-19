@@ -9,6 +9,7 @@ import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -34,12 +35,18 @@ public class BugLifecycleService {
 		return BugLifecycleResponse.from(bug);
 	}
 
-	@Transactional
-	public void markAnalyzing(Long projectId, Long bugId) {
-		changeStatus(projectId, bugId, BugStatus.ANALYZING);
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public boolean claimForAnalysis(Long projectId, Long bugId) {
+		Bug bug = bugRepository.findByIdAndProjectIdForUpdate(bugId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Bug not found: " + bugId));
+		if (bug.getStatus() != BugStatus.NEW) {
+			return false;
+		}
+		bug.updateStatus(BugStatus.ANALYZING);
+		return true;
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void markNew(Long projectId, Long bugId) {
 		changeStatus(projectId, bugId, BugStatus.NEW);
 	}

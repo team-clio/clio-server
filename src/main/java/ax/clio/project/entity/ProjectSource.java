@@ -120,6 +120,11 @@ public class ProjectSource {
 		this.syncStatus = ProjectSourceSyncStatus.FAILED;
 	}
 
+	public void markSynced() {
+		this.syncStatus = ProjectSourceSyncStatus.SYNCED;
+		this.lastSyncedAt = Instant.now();
+	}
+
 	public void markPending() {
 		this.syncStatus = ProjectSourceSyncStatus.PENDING;
 	}

@@ -10,6 +10,8 @@ public interface ProjectSourceRepository extends JpaRepository<ProjectSource, Lo
 
 	List<ProjectSource> findAllByProjectIdOrderByCreatedAtAsc(Long projectId);
 
+	List<ProjectSource> findAllByProjectIdAndEnabledTrue(Long projectId);
+
 	Optional<ProjectSource> findByIdAndProjectId(Long id, Long projectId);
 
 	boolean existsByProjectIdAndRepoUrl(Long projectId, String repoUrl);

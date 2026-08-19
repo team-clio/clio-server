@@ -44,7 +44,7 @@ class RepositorySyncAgentDispatcherTest {
 				"https://git.example.internal/team/app.git"
 		));
 
-		verify(projectService, never()).markRepositorySyncing(7L, 42L);
+		verify(projectService).markRepositorySyncing(7L, 42L);
 		verify(projectService).markRepositorySyncFailed(7L, 42L);
 	}
 

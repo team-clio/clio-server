@@ -1,6 +1,6 @@
 package ax.clio.agent.event;
 
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -36,7 +36,7 @@ class BugCollectedDispatchIntegrationTest {
 	}
 
 	@Test
-	void dispatchesOnlyAfterTheBugCollectionTransactionCommits() throws Exception {
+	void keepsBugWaitingWhenTheProjectHasNoRepository() throws Exception {
 		Project project = projectRepository.save(Project.create("Agent dispatch", null));
 
 		String response = mockMvc.perform(post("/external-api/v1/projects/" + project.getId() + "/bugs")
@@ -54,6 +54,9 @@ class BugCollectedDispatchIntegrationTest {
 				.andReturn().getResponse().getContentAsString();
 		JsonNode collected = OBJECT_MAPPER.readTree(response);
 
-		verify(agentClient).processBug(project.getId(), collected.get("id").asLong());
+		verifyNoInteractions(agentClient);
+		org.assertj.core.api.Assertions.assertThat(
+				bugRepository.findById(collected.get("id").asLong()).orElseThrow().getStatus()
+		).isEqualTo(ax.clio.bug.entity.BugStatus.NEW);
 	}
 }

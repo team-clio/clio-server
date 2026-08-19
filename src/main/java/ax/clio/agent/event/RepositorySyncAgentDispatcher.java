@@ -21,6 +21,9 @@ public class RepositorySyncAgentDispatcher {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void dispatch(RepositorySyncEvent event) {
 		try {
+			if (event.requestType() == RepositorySyncRequestType.REPOSITORY_ADDED) {
+				projectService.markRepositorySyncing(event.projectId(), event.sourceId());
+			}
 			agentClient.dispatchRepositorySync(
 					event.projectId(),
 					event.sourceId(),
@@ -28,9 +31,6 @@ public class RepositorySyncAgentDispatcher {
 					event.branch(),
 					event.sourceUri()
 			);
-			if (event.requestType() == RepositorySyncRequestType.REPOSITORY_ADDED) {
-				projectService.markRepositorySyncing(event.projectId(), event.sourceId());
-			}
 		} catch (RuntimeException exception) {
 			log.error(
 					"Failed to dispatch Repository sync to Clio Agent. projectId={}, sourceId={}",
