@@ -16,13 +16,20 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "project_contexts")
+@Table(
+		name = "project_contexts",
+		uniqueConstraints = @UniqueConstraint(
+				name = "uk_project_context_project_content_hash",
+				columnNames = {"project_id", "content_hash"}
+		)
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProjectContext {
 
@@ -51,11 +58,39 @@ public class ProjectContext {
 	@Column(length = 1000)
 	private String sourceUrl;
 
+	@Column(name = "original_filename", nullable = false, length = 500)
+	private String originalFilename;
+
+	@Column(name = "media_type", nullable = false, length = 100)
+	private String mediaType;
+
+	@Column(name = "content_hash", nullable = false, length = 71)
+	private String contentHash;
+
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
 
 	@Column(nullable = false)
 	private Instant updatedAt;
+
+	public static ProjectContext createDocument(
+			Project project,
+			String title,
+			String markdown,
+			String originalFilename,
+			String mediaType,
+			String contentHash
+	) {
+		ProjectContext context = new ProjectContext();
+		context.project = project;
+		context.title = title.trim();
+		context.type = ProjectContextType.ETC;
+		context.content = markdown;
+		context.originalFilename = originalFilename;
+		context.mediaType = mediaType;
+		context.contentHash = contentHash;
+		return context;
+	}
 
 	@PrePersist
 	void prePersist() {
