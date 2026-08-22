@@ -11,4 +11,6 @@ public interface IssueRepository extends JpaRepository<Issue, Long>, JpaSpecific
 	Optional<Issue> findByIdAndProjectId(Long id, Long projectId);
 
 	boolean existsByIdAndProjectId(Long id, Long projectId);
+
+	long deleteByProjectId(Long projectId);
 }

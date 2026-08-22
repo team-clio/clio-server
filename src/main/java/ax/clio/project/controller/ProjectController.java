@@ -48,6 +48,12 @@ public class ProjectController {
 		return ResponseEntity.ok(projectService.updateProject(projectId, request));
 	}
 
+	@DeleteMapping("/{projectId}")
+	public ResponseEntity<Void> deleteProject(@PathVariable Long projectId) {
+		projectService.deleteProject(projectId);
+		return ResponseEntity.noContent().build();
+	}
+
 	@GetMapping("/{projectId}/repositories")
 	public ResponseEntity<ListResponse<RepositoryResponse>> getRepositories(@PathVariable Long projectId) {
 		return ResponseEntity.ok(new ListResponse<>(projectService.getRepositories(projectId)));

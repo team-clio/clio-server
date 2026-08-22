@@ -67,4 +67,6 @@ public interface BugRepository extends JpaRepository<Bug, Long>, JpaSpecificatio
 			order by bug.occurredAt
 			""")
 	List<Bug> findLinkedForStatsBetween(Long projectId, Instant from, Instant to);
+
+	long deleteByProjectId(Long projectId);
 }

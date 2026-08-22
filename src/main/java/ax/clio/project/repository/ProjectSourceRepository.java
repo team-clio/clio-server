@@ -17,4 +17,6 @@ public interface ProjectSourceRepository extends JpaRepository<ProjectSource, Lo
 	boolean existsByProjectIdAndRepoUrl(Long projectId, String repoUrl);
 
 	boolean existsByProjectIdAndRepoUrlAndIdNot(Long projectId, String repoUrl, Long id);
+
+	long deleteByProjectId(Long projectId);
 }

@@ -5,8 +5,14 @@ import java.util.List;
 import ax.clio.agent.client.RepositorySyncRequestType;
 import ax.clio.agent.event.RepositorySyncEvent;
 import ax.clio.agent.event.RepositorySyncCompletedEvent;
+import ax.clio.analysis.repository.AnalysisResultRepository;
+import ax.clio.bug.repository.BugRepository;
 import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
+import ax.clio.issue.repository.IssueBranchRepository;
+import ax.clio.issue.repository.IssueBugRepository;
+import ax.clio.issue.repository.IssueRepository;
+import ax.clio.mcp.repository.ApiKeyRepository;
 import ax.clio.project.dto.CreateProjectRequest;
 import ax.clio.project.dto.ProjectResponse;
 import ax.clio.project.dto.RepositoryRequest;
@@ -15,8 +21,10 @@ import ax.clio.project.dto.UpdateProjectRequest;
 import ax.clio.project.entity.Project;
 import ax.clio.project.entity.ProjectSource;
 import ax.clio.project.repository.ProjectRepository;
+import ax.clio.project.repository.ProjectContextRepository;
 import ax.clio.project.repository.ProjectSourceRepository;
 import ax.clio.project.repository.RepositoryCredentialRepository;
+import ax.clio.workflow.repository.AgentWorkflowRunRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,7 +39,15 @@ public class ProjectService {
 
 	private final ProjectRepository projectRepository;
 	private final ProjectSourceRepository projectSourceRepository;
+	private final ProjectContextRepository projectContextRepository;
 	private final RepositoryCredentialRepository repositoryCredentialRepository;
+	private final BugRepository bugRepository;
+	private final IssueRepository issueRepository;
+	private final IssueBugRepository issueBugRepository;
+	private final IssueBranchRepository issueBranchRepository;
+	private final AgentWorkflowRunRepository agentWorkflowRunRepository;
+	private final AnalysisResultRepository analysisResultRepository;
+	private final ApiKeyRepository apiKeyRepository;
 	private final ApplicationEventPublisher eventPublisher;
 
 	public List<ProjectResponse> getProjects() {
@@ -66,6 +82,24 @@ public class ProjectService {
 		} catch (DataIntegrityViolationException exception) {
 			throw new ConflictException("Project name already exists.");
 		}
+	}
+
+	@Transactional
+	public void deleteProject(Long projectId) {
+		Project project = projectRepository.findByIdForUpdate(projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Project not found: " + projectId));
+		analysisResultRepository.clearPreviousAnalysisResultByProjectId(projectId);
+		analysisResultRepository.deleteByWorkflowRunProjectId(projectId);
+		agentWorkflowRunRepository.deleteByProjectId(projectId);
+		issueBranchRepository.deleteByIssueProjectId(projectId);
+		issueBugRepository.deleteByIssueProjectId(projectId);
+		issueRepository.deleteByProjectId(projectId);
+		bugRepository.deleteByProjectId(projectId);
+		apiKeyRepository.deleteByProjectId(projectId);
+		projectContextRepository.deleteByProjectId(projectId);
+		repositoryCredentialRepository.deleteByProjectSourceProjectId(projectId);
+		projectSourceRepository.deleteByProjectId(projectId);
+		projectRepository.delete(project);
 	}
 
 	public List<RepositoryResponse> getRepositories(Long projectId) {

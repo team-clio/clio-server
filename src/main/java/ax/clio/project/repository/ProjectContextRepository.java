@@ -13,4 +13,6 @@ public interface ProjectContextRepository extends JpaRepository<ProjectContext, 
 	Optional<ProjectContext> findByIdAndProjectId(Long id, Long projectId);
 
 	List<ProjectContext> findAllByProjectIdOrderByCreatedAtDesc(Long projectId);
+
+	long deleteByProjectId(Long projectId);
 }

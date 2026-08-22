@@ -15,4 +15,6 @@ public interface IssueBugRepository extends JpaRepository<IssueBug, Long> {
 	List<IssueBug> findByIssueIdOrderByCreatedAtAsc(Long issueId);
 
 	List<IssueBug> findByBugIdIn(List<Long> bugIds);
+
+	long deleteByIssueProjectId(Long projectId);
 }

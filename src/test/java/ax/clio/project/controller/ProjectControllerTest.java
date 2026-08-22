@@ -92,6 +92,33 @@ class ProjectControllerTest {
 	}
 
 	@Test
+	void deletesProjectAndItsProjectScopedRecords() throws Exception {
+		Project project = projectRepository.save(Project.create("Delete me", null));
+
+		mockMvc.perform(post("/api/v1/projects/{projectId}/repositories", project.getId())
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{"provider":"GITHUB","owner":"acme","name":"delete-me","url":"https://github.com/acme/delete-me","defaultBranch":"main","includePaths":[],"excludePaths":[],"enabled":true}
+							"""))
+				.andExpect(status().isCreated());
+
+		mockMvc.perform(delete("/api/v1/projects/{projectId}", project.getId()))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/v1/projects"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items.length()").value(0));
+		mockMvc.perform(get("/api/v1/projects/{projectId}/repositories", project.getId()))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void returnsNotFoundWhenDeletingUnknownProject() throws Exception {
+		mockMvc.perform(delete("/api/v1/projects/{projectId}", 999_999L))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
 	void createsUpdatesListsAndDeletesRepository() throws Exception {
 		Project project = projectRepository.save(Project.create("Clio Admin", null));
 

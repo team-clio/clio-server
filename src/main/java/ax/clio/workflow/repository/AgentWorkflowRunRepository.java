@@ -13,4 +13,6 @@ public interface AgentWorkflowRunRepository extends JpaRepository<AgentWorkflowR
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	Optional<AgentWorkflowRun> findByIdAndProjectId(Long id, Long projectId);
+
+	long deleteByProjectId(Long projectId);
 }
