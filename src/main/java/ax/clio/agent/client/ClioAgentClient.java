@@ -41,6 +41,20 @@ public class ClioAgentClient {
 				.toBodilessEntity();
 	}
 
+	public void deleteProjectData(Long projectId) {
+		Map<String, Object> body = Map.of(
+				"assistant_id", ROOT_GRAPH_ID,
+				"input", Map.of("request", Map.of(
+						"request_id", "project-deleted-" + projectId,
+						"request_type", "project_deleted",
+						"project_id", projectId.toString(),
+						"payload", Map.of()
+				))
+		);
+		restClient.post().uri("/runs/wait").contentType(MediaType.APPLICATION_JSON)
+				.body(body).retrieve().toBodilessEntity();
+	}
+
 	public void dispatchRepositorySync(
 			Long projectId,
 			Long sourceId,

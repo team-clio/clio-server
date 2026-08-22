@@ -3,6 +3,8 @@ package ax.clio.project.service;
 import java.util.List;
 
 import ax.clio.agent.client.RepositorySyncRequestType;
+import ax.clio.agent.client.ClioAgentClient;
+import ax.clio.agent.client.ClioAgentProperties;
 import ax.clio.agent.event.RepositorySyncEvent;
 import ax.clio.agent.event.RepositorySyncCompletedEvent;
 import ax.clio.analysis.repository.AnalysisResultRepository;
@@ -48,6 +50,8 @@ public class ProjectService {
 	private final AgentWorkflowRunRepository agentWorkflowRunRepository;
 	private final AnalysisResultRepository analysisResultRepository;
 	private final ApiKeyRepository apiKeyRepository;
+	private final ClioAgentClient agentClient;
+	private final ClioAgentProperties agentProperties;
 	private final ApplicationEventPublisher eventPublisher;
 
 	public List<ProjectResponse> getProjects() {
@@ -88,6 +92,9 @@ public class ProjectService {
 	public void deleteProject(Long projectId) {
 		Project project = projectRepository.findByIdForUpdate(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Project not found: " + projectId));
+		if (agentProperties.enabled()) {
+			agentClient.deleteProjectData(projectId);
+		}
 		analysisResultRepository.clearPreviousAnalysisResultByProjectId(projectId);
 		analysisResultRepository.deleteByWorkflowRunProjectId(projectId);
 		agentWorkflowRunRepository.deleteByProjectId(projectId);
