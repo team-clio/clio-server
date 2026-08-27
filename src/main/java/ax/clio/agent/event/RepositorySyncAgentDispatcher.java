@@ -28,8 +28,11 @@ public class RepositorySyncAgentDispatcher {
 					event.projectId(),
 					event.sourceId(),
 					event.requestType(),
+					event.requestId(),
 					event.branch(),
-					event.sourceUri()
+					event.sourceUri(),
+					event.includePaths(),
+					event.excludePaths()
 			);
 		} catch (RuntimeException exception) {
 			log.error(

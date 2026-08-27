@@ -1,10 +1,16 @@
 package ax.clio.agent.event;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
 
 import ax.clio.agent.client.ClioAgentClient;
 import ax.clio.agent.client.RepositorySyncRequestType;
@@ -63,11 +69,14 @@ class RepositorySyncDispatchIntegrationTest {
 		long sourceId = created.get("id").asLong();
 
 		verify(agentClient).dispatchRepositorySync(
-				project.getId(),
-				sourceId,
-				RepositorySyncRequestType.REPOSITORY_ADDED,
-				"main",
-				"https://github.com/acme/clio-web"
+				eq(project.getId()),
+				eq(sourceId),
+				eq(RepositorySyncRequestType.REPOSITORY_ADDED),
+				anyString(),
+				eq("main"),
+				eq("https://github.com/acme/clio-web"),
+				eq(List.of()),
+				eq(List.of())
 		);
 		assertEquals(
 				ProjectSourceSyncStatus.SYNCING,
@@ -101,11 +110,54 @@ class RepositorySyncDispatchIntegrationTest {
 				.andExpect(status().isNoContent());
 
 		verify(agentClient).dispatchRepositorySync(
-				project.getId(),
-				sourceId,
-				RepositorySyncRequestType.REPOSITORY_REMOVED,
-				"main",
-				"https://github.com/acme/clio-web"
+				eq(project.getId()),
+				eq(sourceId),
+				eq(RepositorySyncRequestType.REPOSITORY_REMOVED),
+				anyString(),
+				eq("main"),
+				eq("https://github.com/acme/clio-web"),
+				eq(List.of()),
+				eq(List.of())
+		);
+	}
+
+	@Test
+	void dispatchesRepositoryUpdateWithConfiguredAnalysisPaths() throws Exception {
+		Project project = projectRepository.save(Project.create("Scope dispatch", null));
+		String response = mockMvc.perform(post("/api/v1/projects/{projectId}/repositories", project.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "provider":"GITHUB", "owner":"acme", "name":"clio-web",
+								  "url":"https://github.com/acme/clio-web", "defaultBranch":"main",
+								  "includePaths":[], "excludePaths":[], "enabled":true
+								}
+								"""))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		long sourceId = OBJECT_MAPPER.readTree(response).get("id").asLong();
+		clearInvocations(agentClient);
+
+		mockMvc.perform(patch("/api/v1/projects/{projectId}/repositories/{repositoryId}", project.getId(), sourceId)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "provider":"GITHUB", "owner":"acme", "name":"clio-web",
+								  "url":"https://github.com/acme/clio-web", "defaultBranch":"main",
+								  "includePaths":["src/**"],
+								  "excludePaths":["src/generated/**"], "enabled":true
+								}
+								"""))
+				.andExpect(status().isOk());
+
+		verify(agentClient).dispatchRepositorySync(
+				eq(project.getId()), eq(sourceId), eq(RepositorySyncRequestType.REPOSITORY_ADDED),
+				anyString(), eq("main"), eq("https://github.com/acme/clio-web"),
+				eq(List.of("src/**")), eq(List.of("src/generated/**"))
+		);
+		assertEquals(
+				ProjectSourceSyncStatus.SYNCING,
+				projectSourceRepository.findById(sourceId).orElseThrow().getSyncStatus()
 		);
 	}
 }

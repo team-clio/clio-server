@@ -8,6 +8,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.net.URI;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -64,13 +65,15 @@ class ClioAgentClientTest {
 						  "assistant_id": "clio_agent",
 						  "input": {
 						    "request": {
-						      "request_id": "repository-7-42",
+						      "request_id": "repository-7-42-sync-1",
 						      "request_type": "repository_added",
 						      "project_id": "7",
 						      "payload": {
 						        "repository_id": "42",
 						        "branch": "main",
-						        "source_uri": "https://git.example.internal/team/app.git"
+						        "source_uri": "https://git.example.internal/team/app.git",
+						        "include_paths": ["src/**"],
+						        "exclude_paths": ["src/generated/**"]
 						      }
 						    }
 						  }
@@ -82,8 +85,11 @@ class ClioAgentClientTest {
 				7L,
 				42L,
 				RepositorySyncRequestType.REPOSITORY_ADDED,
+				"repository-7-42-sync-1",
 				"main",
-				"https://git.example.internal/team/app.git"
+				"https://git.example.internal/team/app.git",
+				List.of("src/**"),
+				List.of("src/generated/**")
 		);
 
 		server.verify();
@@ -105,7 +111,7 @@ class ClioAgentClientTest {
 						  "assistant_id": "clio_agent",
 						  "input": {
 						    "request": {
-						      "request_id": "repository-7-42",
+						      "request_id": "repository-7-42-remove-1",
 						      "request_type": "repository_removed",
 						      "project_id": "7",
 						      "payload": {
@@ -122,8 +128,11 @@ class ClioAgentClientTest {
 				7L,
 				42L,
 				RepositorySyncRequestType.REPOSITORY_REMOVED,
+				"repository-7-42-remove-1",
 				"main",
-				null
+				null,
+				List.of(),
+				List.of()
 		);
 
 		server.verify();

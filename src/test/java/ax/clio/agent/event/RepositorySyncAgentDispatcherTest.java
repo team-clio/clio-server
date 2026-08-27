@@ -5,6 +5,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import java.util.List;
+
 import ax.clio.agent.client.ClioAgentClient;
 import ax.clio.agent.client.RepositorySyncRequestType;
 import ax.clio.project.service.ProjectService;
@@ -20,13 +22,17 @@ class RepositorySyncAgentDispatcherTest {
 	@Test
 	void dispatchesRepositoryAddedAndMarksSyncing() {
 		dispatcher.dispatch(new RepositorySyncEvent(
-				7L, 42L, RepositorySyncRequestType.REPOSITORY_ADDED, "main",
-				"https://git.example.internal/team/app.git"
+				7L, 42L, RepositorySyncRequestType.REPOSITORY_ADDED,
+				"repository-7-42-sync-1", "main",
+				"https://git.example.internal/team/app.git",
+				List.of("src/**"), List.of("src/generated/**")
 		));
 
 		verify(client).dispatchRepositorySync(
-				7L, 42L, RepositorySyncRequestType.REPOSITORY_ADDED, "main",
-				"https://git.example.internal/team/app.git"
+				7L, 42L, RepositorySyncRequestType.REPOSITORY_ADDED,
+				"repository-7-42-sync-1", "main",
+				"https://git.example.internal/team/app.git",
+				List.of("src/**"), List.of("src/generated/**")
 		);
 		verify(projectService).markRepositorySyncing(7L, 42L);
 		verify(projectService, never()).markRepositorySyncFailed(7L, 42L);
@@ -35,13 +41,17 @@ class RepositorySyncAgentDispatcherTest {
 	@Test
 	void keepsRepositoryCreationSuccessfulWhenAgentDispatchFails() {
 		doThrow(new IllegalStateException("agent unavailable")).when(client).dispatchRepositorySync(
-				7L, 42L, RepositorySyncRequestType.REPOSITORY_ADDED, "main",
-				"https://git.example.internal/team/app.git"
+				7L, 42L, RepositorySyncRequestType.REPOSITORY_ADDED,
+				"repository-7-42-sync-2", "main",
+				"https://git.example.internal/team/app.git",
+				List.of("src/**"), List.of()
 		);
 
 		dispatcher.dispatch(new RepositorySyncEvent(
-				7L, 42L, RepositorySyncRequestType.REPOSITORY_ADDED, "main",
-				"https://git.example.internal/team/app.git"
+				7L, 42L, RepositorySyncRequestType.REPOSITORY_ADDED,
+				"repository-7-42-sync-2", "main",
+				"https://git.example.internal/team/app.git",
+				List.of("src/**"), List.of()
 		));
 
 		verify(projectService).markRepositorySyncing(7L, 42L);
@@ -51,11 +61,13 @@ class RepositorySyncAgentDispatcherTest {
 	@Test
 	void dispatchesRepositoryRemovedWithoutTouchingDeletedRowStatus() {
 		dispatcher.dispatch(new RepositorySyncEvent(
-				7L, 42L, RepositorySyncRequestType.REPOSITORY_REMOVED, "main", null
+				7L, 42L, RepositorySyncRequestType.REPOSITORY_REMOVED,
+				"repository-7-42-remove-1", "main", null, List.of(), List.of()
 		));
 
 		verify(client).dispatchRepositorySync(
-				7L, 42L, RepositorySyncRequestType.REPOSITORY_REMOVED, "main", null
+				7L, 42L, RepositorySyncRequestType.REPOSITORY_REMOVED,
+				"repository-7-42-remove-1", "main", null, List.of(), List.of()
 		);
 		verify(projectService, never()).markRepositorySyncing(7L, 42L);
 		verify(projectService, never()).markRepositorySyncFailed(7L, 42L);

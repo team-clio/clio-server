@@ -1,6 +1,7 @@
 package ax.clio.project.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import ax.clio.agent.client.RepositorySyncRequestType;
 import ax.clio.agent.client.ClioAgentClient;
@@ -132,13 +133,7 @@ public class ProjectService {
 		} catch (DataIntegrityViolationException exception) {
 			throw new ConflictException("Repository is already connected to this project.");
 		}
-		eventPublisher.publishEvent(new RepositorySyncEvent(
-				projectId,
-				source.getId(),
-				RepositorySyncRequestType.REPOSITORY_ADDED,
-				source.getTargetBranch(),
-				source.getRepoUrl()
-		));
+		publishRepositorySync(source, RepositorySyncRequestType.REPOSITORY_ADDED);
 		return RepositoryResponse.from(source);
 	}
 
@@ -154,14 +149,17 @@ public class ProjectService {
 				request.provider(), request.owner(), request.name(), repoUrl, request.defaultBranch(),
 				joinPaths(request.includePaths()), joinPaths(request.excludePaths()), request.enabled()
 		);
-		// D2: repository_changed는 active commit 컬럼이 없어 아직 발행하지 않는다.
-		// 변경된 원격 정보를 재동기화해야 하므로 상태를 PENDING으로 되돌린다.
+		// 연결 정보나 분석 범위가 바뀌면 전체 snapshot을 다시 만든다.
 		source.markPending();
 		try {
-			return RepositoryResponse.from(projectSourceRepository.saveAndFlush(source));
+			source = projectSourceRepository.saveAndFlush(source);
 		} catch (DataIntegrityViolationException exception) {
 			throw new ConflictException("Repository is already connected to this project.");
 		}
+		if (source.isEnabled()) {
+			publishRepositorySync(source, RepositorySyncRequestType.REPOSITORY_ADDED);
+		}
+		return RepositoryResponse.from(source);
 	}
 
 	@Transactional
@@ -174,8 +172,11 @@ public class ProjectService {
 				projectId,
 				source.getId(),
 				RepositorySyncRequestType.REPOSITORY_REMOVED,
+				repositoryRequestId(projectId, source.getId()),
 				source.getTargetBranch(),
-				source.getRepoUrl()
+				source.getRepoUrl(),
+				List.of(),
+				List.of()
 		));
 	}
 
@@ -189,7 +190,7 @@ public class ProjectService {
 		findRepository(projectId, repositoryId).markFailed();
 	}
 
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void markRepositorySynced(Long projectId, Long repositoryId) {
 		findRepository(projectId, repositoryId).markSynced();
 		eventPublisher.publishEvent(new RepositorySyncCompletedEvent(projectId));
@@ -207,5 +208,23 @@ public class ProjectService {
 
 	private String joinPaths(List<String> paths) {
 		return paths.stream().map(String::trim).filter(path -> !path.isBlank()).distinct().reduce((left, right) -> left + "\n" + right).orElse(null);
+	}
+
+	private void publishRepositorySync(ProjectSource source, RepositorySyncRequestType requestType) {
+		RepositoryResponse repository = RepositoryResponse.from(source);
+		eventPublisher.publishEvent(new RepositorySyncEvent(
+				source.getProject().getId(),
+				source.getId(),
+				requestType,
+				repositoryRequestId(source.getProject().getId(), source.getId()),
+				source.getTargetBranch(),
+				source.getRepoUrl(),
+				repository.includePaths(),
+				repository.excludePaths()
+		));
+	}
+
+	private String repositoryRequestId(Long projectId, Long repositoryId) {
+		return "repository-" + projectId + "-" + repositoryId + "-" + UUID.randomUUID();
 	}
 }

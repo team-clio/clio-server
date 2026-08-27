@@ -59,8 +59,11 @@ public class ClioAgentClient {
 			Long projectId,
 			Long sourceId,
 			RepositorySyncRequestType requestType,
+			String requestId,
 			String branch,
-			String sourceUri
+			String sourceUri,
+			List<String> includePaths,
+			List<String> excludePaths
 	) {
 		Map<String, Object> payload = new LinkedHashMap<>();
 		payload.put("repository_id", sourceId.toString());
@@ -68,10 +71,14 @@ public class ClioAgentClient {
 		if (sourceUri != null) {
 			payload.put("source_uri", sourceUri);
 		}
+		if (requestType == RepositorySyncRequestType.REPOSITORY_ADDED) {
+			payload.put("include_paths", List.copyOf(includePaths));
+			payload.put("exclude_paths", List.copyOf(excludePaths));
+		}
 		Map<String, Object> body = Map.of(
 				"assistant_id", ROOT_GRAPH_ID,
 				"input", Map.of("request", Map.of(
-						"request_id", "repository-" + projectId + "-" + sourceId,
+						"request_id", requestId,
 						"request_type", requestType.wireName(),
 						"project_id", projectId.toString(),
 						"payload", payload

@@ -1,5 +1,7 @@
 package ax.clio.agent.event;
 
+import java.util.List;
+
 import ax.clio.agent.client.RepositorySyncRequestType;
 
 /**
@@ -9,7 +11,10 @@ public record RepositorySyncEvent(
 		Long projectId,
 		Long sourceId,
 		RepositorySyncRequestType requestType,
+		String requestId,
 		String branch,
-		String sourceUri
+		String sourceUri,
+		List<String> includePaths,
+		List<String> excludePaths
 ) {
 }
