@@ -51,4 +51,6 @@ macOS의 Docker 컨테이너에서는 일반적으로 Metal 가속을 사용하�
 
 ## 개발 규칙
 
-작업 절차는 `mydocs/workflow-rules.md` 를 따른다.
+작업 절차는 `mydocs/workflow-rules.md`, 코드 배치는 `mydocs/code-conventions.md` 를 따른다.
+작업 절차는 자동 적용이 아니라 **작업 시작 전에 적용 여부를 묻고** 결정한다. 자세한 내용은
+[`AGENTS.md`](AGENTS.md)를 참고한다.
