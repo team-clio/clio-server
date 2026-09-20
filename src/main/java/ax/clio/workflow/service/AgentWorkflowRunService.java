@@ -53,7 +53,7 @@ public class AgentWorkflowRunService {
 								hash,
 								persistenceTree(request.requestPayload())
 						)));
-				observability.recordCreated(request.requestType(), existing.isPresent());
+				observability.recordCreated(request.requestType(), existing.isPresent(), run.getId());
 				return response(run);
 			} catch (ConflictException exception) {
 				observability.recordConflict(request.requestType());
@@ -82,7 +82,8 @@ public class AgentWorkflowRunService {
 						run.getRequestType(),
 						run.getStatus().name().toLowerCase(),
 						duration,
-						run.getFailureCode()
+						run.getFailureCode(),
+						run.getId()
 				);
 			}
 			return response(run);

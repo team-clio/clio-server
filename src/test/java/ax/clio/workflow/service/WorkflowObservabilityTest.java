@@ -18,12 +18,13 @@ class WorkflowObservabilityTest {
 				ObservationRegistry.create()
 		);
 
-		observability.recordCreated("analyze_issue", false);
+		observability.recordCreated("analyze_issue", false, 17L);
 		observability.recordTransition(
 				"analyze_issue",
 				"completed",
 				Duration.ofSeconds(12),
-				null
+				null,
+				17L
 		);
 
 		assertThat(meters.counter(

@@ -28,7 +28,7 @@ public class WorkflowObservability {
 				.observe(action);
 	}
 
-	public void recordCreated(String requestType, boolean replayed) {
+	public void recordCreated(String requestType, boolean replayed, Long workflowRunId) {
 		String outcome = replayed ? "replayed" : "created";
 		meterRegistry.counter("clio.workflow.total", "request.type", requestType, "outcome", outcome)
 				.increment();
@@ -36,14 +36,17 @@ public class WorkflowObservability {
 			meterRegistry.counter("clio.workflow.replay.total", "request.type", requestType).increment();
 		}
 		log.atInfo().addKeyValue("event", "workflow." + outcome)
-				.addKeyValue("request_type", requestType).log("Workflow request recorded");
+				.addKeyValue("request_type", requestType)
+				.addKeyValue("workflow_run_id", workflowRunId)
+				.log("Workflow request recorded");
 	}
 
 	public void recordTransition(
 			String requestType,
 			String outcome,
 			Duration duration,
-			String failureCode
+			String failureCode,
+			Long workflowRunId
 	) {
 		meterRegistry.counter("clio.workflow.total", "request.type", requestType, "outcome", outcome)
 				.increment();
@@ -63,6 +66,7 @@ public class WorkflowObservability {
 		}
 		log.atInfo().addKeyValue("event", "workflow." + outcome)
 				.addKeyValue("request_type", requestType)
+				.addKeyValue("workflow_run_id", workflowRunId)
 				.addKeyValue("error_kind", failureCode == null ? "none" : failureKind(failureCode))
 				.log("Workflow status changed");
 	}
