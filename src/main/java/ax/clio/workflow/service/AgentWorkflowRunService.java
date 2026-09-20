@@ -3,6 +3,7 @@ package ax.clio.workflow.service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.HexFormat;
 
 import ax.clio.common.ConflictException;
@@ -32,35 +33,60 @@ public class AgentWorkflowRunService {
 	private final ProjectRepository projectRepository;
 	private final AgentWorkflowRunRepository workflowRunRepository;
 	private final ObjectMapper objectMapper;
+	private final WorkflowObservability observability;
 
 	@Transactional
 	public WorkflowRunResponse createPending(Long projectId, CreateWorkflowRunRequest request) {
-		Project project = projectRepository.findByIdForUpdate(projectId)
-				.orElseThrow(() -> new ResourceNotFoundException("Project not found: " + projectId));
-		String hash = requestHash(request.requestType(), request.requestPayload());
-		AgentWorkflowRun run = workflowRunRepository.findByProjectIdAndRequestId(projectId, request.requestId())
-				.map(existing -> verifyReplay(existing, hash))
-				.orElseGet(() -> workflowRunRepository.save(AgentWorkflowRun.pending(
-						project,
-						request.requestId(),
-						request.requestType(),
-						hash,
-						persistenceTree(request.requestPayload())
-				)));
-		return response(run);
+		return observability.observe("create", request.requestType(), () -> {
+			Project project = projectRepository.findByIdForUpdate(projectId)
+					.orElseThrow(() -> new ResourceNotFoundException("Project not found: " + projectId));
+			String hash = requestHash(request.requestType(), request.requestPayload());
+			try {
+				java.util.Optional<AgentWorkflowRun> existing = workflowRunRepository
+						.findByProjectIdAndRequestId(projectId, request.requestId());
+				AgentWorkflowRun run = existing
+						.map(value -> verifyReplay(value, hash))
+						.orElseGet(() -> workflowRunRepository.save(AgentWorkflowRun.pending(
+								project,
+								request.requestId(),
+								request.requestType(),
+								hash,
+								persistenceTree(request.requestPayload())
+						)));
+				observability.recordCreated(request.requestType(), existing.isPresent());
+				return response(run);
+			} catch (ConflictException exception) {
+				observability.recordConflict(request.requestType());
+				throw exception;
+			}
+		});
 	}
 
 	@Transactional
 	public WorkflowRunResponse update(Long projectId, Long runId, UpdateWorkflowRunRequest request) {
 		AgentWorkflowRun run = findForUpdate(projectId, runId);
-		com.fasterxml.jackson.databind.JsonNode checkpoint = persistenceTreeOrNull(request.latestCheckpoint());
-		switch (request.status()) {
-			case PENDING -> throw new IllegalArgumentException("A workflow cannot transition back to PENDING.");
-			case RUNNING -> updateRunning(run, checkpoint);
-			case COMPLETED -> updateCompleted(run, persistenceTreeOrNull(request.resultSnapshot()));
-			case FAILED -> updateFailed(run, request.failureCode(), request.failureMessage(), checkpoint);
-		}
-		return response(run);
+		return observability.observe("update", run.getRequestType(), () -> {
+			AgentWorkflowStatus previous = run.getStatus();
+			com.fasterxml.jackson.databind.JsonNode checkpoint = persistenceTreeOrNull(request.latestCheckpoint());
+			switch (request.status()) {
+				case PENDING -> throw new IllegalArgumentException("A workflow cannot transition back to PENDING.");
+				case RUNNING -> updateRunning(run, checkpoint);
+				case COMPLETED -> updateCompleted(run, persistenceTreeOrNull(request.resultSnapshot()));
+				case FAILED -> updateFailed(run, request.failureCode(), request.failureMessage(), checkpoint);
+			}
+			if (previous != run.getStatus()) {
+				Duration duration = run.getStartedAt() != null && run.getCompletedAt() != null
+						? Duration.between(run.getStartedAt(), run.getCompletedAt())
+						: null;
+				observability.recordTransition(
+						run.getRequestType(),
+						run.getStatus().name().toLowerCase(),
+						duration,
+						run.getFailureCode()
+				);
+			}
+			return response(run);
+		});
 	}
 
 	@Transactional(readOnly = true)

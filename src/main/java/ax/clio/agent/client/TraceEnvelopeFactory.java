@@ -6,14 +6,19 @@ import io.micrometer.tracing.Span;
 import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 class TraceEnvelopeFactory {
-	private final Tracer tracer;
+	private final ObjectProvider<Tracer> tracerProvider;
 
 	Map<String, String> current() {
+		Tracer tracer = tracerProvider.getIfAvailable();
+		if (tracer == null) {
+			return Map.of();
+		}
 		Span span = tracer.currentSpan();
 		if (span == null) {
 			return Map.of();

@@ -30,8 +30,15 @@ management:
           endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
 
 clio:
+  observability:
+    stuck-threshold: ${CLIO_WORKFLOW_STUCK_THRESHOLD:PT5M}
   agent:
     enabled: ${CLIO_AGENT_ENABLED:true}
     url: ${CLIO_AGENT_URL:http://localhost:2024}
   pcm-inspect:
     url: ${CLIO_PCM_INSPECT_URL:http://localhost:2025}
+
+logging:
+  structured:
+    format:
+      console: logstash
