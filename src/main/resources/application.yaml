@@ -18,6 +18,10 @@ management:
     web:
       exposure:
         include: health,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        clio.workflow.duration: true
   tracing:
     sampling:
       probability: ${CLIO_TRACING_SAMPLING_PROBABILITY:1.0}
