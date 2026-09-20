@@ -8,6 +8,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Component
 public class ClioAgentClient {
@@ -15,44 +16,59 @@ public class ClioAgentClient {
 	private static final String PROCESS_REPORT = "process_report";
 
 	private final RestClient restClient;
+	private final Supplier<Map<String, String>> traceEnvelope;
 
 	@Autowired
-	public ClioAgentClient(ClioAgentProperties properties) {
+	public ClioAgentClient(
+			RestClient.Builder builder,
+			ClioAgentProperties properties,
+			TraceEnvelopeFactory traceEnvelopeFactory
+	) {
 		// LangGraph's local Uvicorn server accepts HTTP/1.1, not h2c upgrades.
 		this(
-				RestClient.builder().requestFactory(new SimpleClientHttpRequestFactory()),
-				properties
+				builder.clone().requestFactory(new SimpleClientHttpRequestFactory()),
+				properties,
+				traceEnvelopeFactory::current
 		);
 	}
 
 	ClioAgentClient(RestClient.Builder builder, ClioAgentProperties properties) {
+		this(builder, properties, Map::of);
+	}
+
+	ClioAgentClient(
+			RestClient.Builder builder,
+			ClioAgentProperties properties,
+			Supplier<Map<String, String>> traceEnvelope
+	) {
 		this.restClient = builder.baseUrl(properties.url().toString()).build();
+		this.traceEnvelope = traceEnvelope;
 	}
 
 	public void processBug(Long projectId, Long bugId) {
-		String body = """
-				{"assistant_id":"%s","input":{"request":{"request_id":"process-bug-%d","request_type":"%s","project_id":"%d","payload":{"bug_id":"%d"}}}}
-				""".formatted(ROOT_GRAPH_ID, bugId, PROCESS_REPORT, projectId, bugId);
+		Map<String, Object> request = Map.of(
+				"request_id", "process-bug-" + bugId,
+				"request_type", PROCESS_REPORT,
+				"project_id", projectId.toString(),
+				"payload", Map.of("bug_id", bugId.toString())
+		);
 		restClient.post()
 				.uri("/runs")
 				.contentType(MediaType.APPLICATION_JSON)
-				.body(body)
+				.body(runBody(request))
 				.retrieve()
 				.toBodilessEntity();
 	}
 
 	public void deleteProjectData(Long projectId) {
-		Map<String, Object> body = Map.of(
-				"assistant_id", ROOT_GRAPH_ID,
-				"input", Map.of("request", Map.of(
+		Map<String, Object> request = Map.of(
 						"request_id", "project-deleted-" + projectId,
 						"request_type", "project_deleted",
 						"project_id", projectId.toString(),
 						"payload", Map.of()
-				))
 		);
 		restClient.post().uri("/runs/wait").contentType(MediaType.APPLICATION_JSON)
-				.body(body).retrieve().toBodilessEntity();
+				.body(runBody(request)).retrieve().toBodilessEntity();
 	}
 
 	public void dispatchRepositorySync(
@@ -75,19 +91,16 @@ public class ClioAgentClient {
 			payload.put("include_paths", List.copyOf(includePaths));
 			payload.put("exclude_paths", List.copyOf(excludePaths));
 		}
-		Map<String, Object> body = Map.of(
-				"assistant_id", ROOT_GRAPH_ID,
-				"input", Map.of("request", Map.of(
+		Map<String, Object> request = Map.of(
 						"request_id", requestId,
 						"request_type", requestType.wireName(),
 						"project_id", projectId.toString(),
 						"payload", payload
-				))
 		);
 		restClient.post()
 				.uri("/runs")
 				.contentType(MediaType.APPLICATION_JSON)
-				.body(body)
+				.body(runBody(request))
 				.retrieve()
 				.toBodilessEntity();
 	}
@@ -108,40 +121,44 @@ public class ClioAgentClient {
 			payload.put("markdown", markdown);
 			payload.put("source_metadata", sourceMetadata);
 		}
-		Map<String, Object> body = Map.of(
-				"assistant_id", ROOT_GRAPH_ID,
-				"input", Map.of("request", Map.of(
+		Map<String, Object> request = Map.of(
 						"request_id", "document-" + requestType.wireName() + "-" + projectId + "-" + documentId,
 						"request_type", requestType.wireName(),
 						"project_id", projectId.toString(),
 						"payload", payload
-				))
 		);
 		restClient.post()
 				.uri("/runs/wait")
 				.contentType(MediaType.APPLICATION_JSON)
-				.body(body)
+				.body(runBody(request))
 				.retrieve()
 				.toBodilessEntity();
 	}
 
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> readCodeEvidence(Long projectId, List<Map<String, Object>> citations) {
-		Map<String, Object> body = Map.of(
-				"assistant_id", ROOT_GRAPH_ID,
-				"input", Map.of("request", Map.of(
+		Map<String, Object> request = Map.of(
 						"request_id", "code-evidence-" + projectId,
 						"request_type", "read_code_evidence",
 						"project_id", projectId.toString(),
 						"payload", Map.of("citations", citations)
-				))
 		);
 		Map<String, Object> response = restClient.post()
 				.uri("/runs/wait")
 				.contentType(MediaType.APPLICATION_JSON)
-				.body(body)
+				.body(runBody(request))
 				.retrieve()
 				.body(Map.class);
 		return response == null ? Map.of() : response;
+	}
+
+	private Map<String, Object> runBody(Map<String, Object> request) {
+		Map<String, Object> input = new LinkedHashMap<>();
+		input.put("request", request);
+		Map<String, String> telemetry = traceEnvelope.get();
+		if (!telemetry.isEmpty()) {
+			input.put("telemetry", telemetry);
+		}
+		return Map.of("assistant_id", ROOT_GRAPH_ID, "input", input);
 	}
 }

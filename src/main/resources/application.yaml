@@ -13,6 +13,22 @@ spring:
     baseline-on-migrate: true
     baseline-version: 1
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  tracing:
+    sampling:
+      probability: ${CLIO_TRACING_SAMPLING_PROBABILITY:1.0}
+  opentelemetry:
+    resource-attributes:
+      service.name: clio-server
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+
 clio:
   agent:
     enabled: ${CLIO_AGENT_ENABLED:true}
