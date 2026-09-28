@@ -107,7 +107,7 @@ public class AgentWorkflowRunService {
 	}
 
 	private AgentWorkflowRun findForUpdate(Long projectId, Long runId) {
-		return workflowRunRepository.findByIdAndProjectId(runId, projectId)
+		return workflowRunRepository.findByIdAndProjectIdForUpdate(runId, projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Workflow run not found: " + runId));
 	}
 
