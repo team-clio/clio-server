@@ -233,6 +233,35 @@ class AgentIntegrationLifecycleTest {
 				.andExpect(status().isConflict());
 	}
 
+	@Test
+	void completesReviewWithoutLeavingBugAnalyzing() throws Exception {
+		Project project = projectRepository.save(Project.create("Review", null));
+		String external = "/external-api/v1/projects/" + project.getId();
+		String internal = "/internal-api/v1/projects/" + project.getId();
+		long bugId = json(mockMvc.perform(post(external + "/bugs")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"title\":\"Review bug\",\"source\":\"MANUAL\",\"occurred_at\":\"2026-10-03T00:00:00Z\"}"))
+				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+		mockMvc.perform(patch(external + "/bugs/" + bugId)
+				.contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"ANALYZING\"}"))
+				.andExpect(status().isOk());
+		long runId = json(mockMvc.perform(post(internal + "/workflow-runs")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"request_id\":\"REVIEW\",\"request_type\":\"process_report\",\"request_payload\":{\"bug_id\":%d}}".formatted(bugId)))
+				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+		String runPath = internal + "/workflow-runs/" + runId;
+		mockMvc.perform(patch(runPath).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"RUNNING\"}"))
+				.andExpect(status().isOk());
+		String completed = "{\"status\":\"COMPLETED\",\"result_snapshot\":{\"action\":\"needs_review\",\"bug_id\":\"%d\"}}".formatted(bugId);
+		mockMvc.perform(patch(runPath).contentType(MediaType.APPLICATION_JSON).content(completed))
+				.andExpect(status().isOk());
+		mockMvc.perform(patch(runPath).contentType(MediaType.APPLICATION_JSON).content(completed))
+				.andExpect(status().isOk());
+		mockMvc.perform(get(external + "/bugs"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.items[0].status").value("TRIAGED"))
+				.andExpect(jsonPath("$.items[0].issue_id").isEmpty());
+	}
+
 	private JsonNode json(String value) throws Exception {
 		return OBJECT_MAPPER.readTree(value);
 	}

@@ -6,6 +6,8 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 
+import ax.clio.bug.entity.BugStatus;
+import ax.clio.bug.repository.BugRepository;
 import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
 import ax.clio.project.entity.Project;
@@ -30,6 +32,7 @@ public class AgentWorkflowRunService {
 	private static final com.fasterxml.jackson.databind.ObjectMapper PERSISTENCE_MAPPER =
 			new com.fasterxml.jackson.databind.ObjectMapper();
 
+	private final BugRepository bugRepository;
 	private final ProjectRepository projectRepository;
 	private final AgentWorkflowRunRepository workflowRunRepository;
 	private final ObjectMapper objectMapper;
@@ -137,6 +140,13 @@ public class AgentWorkflowRunService {
 				throw new ConflictException("Workflow result differs from the stored completed result: " + run.getId());
 			}
 			return;
+		}
+		if ("process_report".equals(run.getRequestType()) && result != null
+				&& "needs_review".equals(result.path("action").asText())) {
+			long bugId = result.path("bug_id").asLong();
+			var bug = bugRepository.findByIdAndProjectIdForUpdate(bugId, run.getProject().getId())
+					.orElseThrow(() -> new ResourceNotFoundException("Bug not found: " + bugId));
+			bug.updateStatus(BugStatus.TRIAGED);
 		}
 		run.complete(result);
 	}
