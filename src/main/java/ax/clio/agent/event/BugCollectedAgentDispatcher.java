@@ -6,6 +6,7 @@ import ax.clio.bug.entity.BugStatus;
 import ax.clio.bug.repository.BugRepository;
 import ax.clio.project.entity.ProjectSourceSyncStatus;
 import ax.clio.project.repository.ProjectSourceRepository;
+import ax.clio.workflow.service.AgentWorkflowRunService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,6 +23,7 @@ public class BugCollectedAgentDispatcher {
 	private final BugLifecycleService bugLifecycleService;
 	private final BugRepository bugRepository;
 	private final ProjectSourceRepository projectSourceRepository;
+	private final AgentWorkflowRunService workflowRunService;
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void dispatch(BugCollectedEvent event) {
@@ -32,7 +34,11 @@ public class BugCollectedAgentDispatcher {
 			if (!bugLifecycleService.claimForAnalysis(event.projectId(), event.bugId())) {
 				return;
 			}
-			agentClient.processBug(event.projectId(), event.bugId());
+			agentClient.processBug(
+					event.projectId(),
+					event.bugId(),
+					workflowRunService.nextProcessReportRequestId(event.projectId(), event.bugId())
+			);
 		} catch (RuntimeException exception) {
 			log.error(
 					"Failed to dispatch Bug processing to Clio Agent. projectId={}, bugId={}",

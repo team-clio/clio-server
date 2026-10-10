@@ -93,6 +93,17 @@ public class AgentWorkflowRunService {
 		});
 	}
 
+	/**
+	 * 버그 처리 요청 ID를 만든다. 첫 시도는 {@code process-bug-{bugId}}이고, 이전 run이 있으면
+	 * 실패 기록을 보존하도록 {@code -retry-{n}}을 붙인 새 ID를 쓴다.
+	 */
+	@Transactional(readOnly = true)
+	public String nextProcessReportRequestId(Long projectId, Long bugId) {
+		String firstAttempt = "process-bug-" + bugId;
+		long attempts = workflowRunRepository.countAttempts(projectId, firstAttempt);
+		return attempts == 0 ? firstAttempt : firstAttempt + "-retry-" + attempts;
+	}
+
 	@Transactional(readOnly = true)
 	public WorkflowRunResponse get(Long projectId, Long runId) {
 		return response(workflowRunRepository.findByIdAndProjectId(runId, projectId)
