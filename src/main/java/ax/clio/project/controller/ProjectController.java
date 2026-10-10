@@ -76,6 +76,14 @@ public class ProjectController {
 		return ResponseEntity.ok(projectService.updateRepository(projectId, repositoryId, request));
 	}
 
+	@PostMapping("/{projectId}/repositories/{repositoryId}/sync")
+	public ResponseEntity<RepositoryResponse> resyncRepository(
+			@PathVariable Long projectId,
+			@PathVariable Long repositoryId
+	) {
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(projectService.resyncRepository(projectId, repositoryId));
+	}
+
 	@DeleteMapping("/{projectId}/repositories/{repositoryId}")
 	public ResponseEntity<Void> deleteRepository(
 			@PathVariable Long projectId,
