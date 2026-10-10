@@ -46,3 +46,18 @@ request_id 형식이 바뀌어도 영향이 없다.
   `process-bug-70`처럼 접두사만 같은 다른 버그의 run은 세지 않는다.
 - 결과적 변화: `IGNORED → NEW`로 되돌린 버그가 다시 디스패치되면, 이전에는 `COMPLETED` run이 재생되어 아무 일도
   일어나지 않았지만 이제 새로 처리된다.
+
+## D3. 버그 재시도 API 위치와 허용 상태
+
+### 결정: A — `POST /external-api/v1/projects/{p}/bugs/{bugId}/retry`
+
+- 대안 A: 외부 API 경계. 기존 버그 상태 변경(`PATCH /bugs/{bugId}`)과 같은 곳이다. ← 선택
+- 대안 B: 관리 API(`/api/v1/...`) 경계. 외부 연동이 재시도를 호출하지 못하게 제한할 때 쓴다.
+
+선택 이유: 버그 lifecycle 변경이 이미 외부 API에 있고, 외부 연동의 재시도를 막을 정책 요구가 없다.
+
+구현 규칙:
+- `FAILED` 버그만 허용하고 그 외 상태는 409를 반환한다.
+- 버그를 `FAILED → NEW`로 바꾸고 `BugCollectedEvent`를 발행한다. 커밋 후 기존 디스패처가 `ANALYZING`으로
+  점유하고 D2의 새 request_id로 Agent에 보낸다. 중복 요청은 상태 검사와 점유 잠금으로 한 번만 디스패치된다.
+- 응답은 202와 갱신된 버그 상태(`NEW`)다.
