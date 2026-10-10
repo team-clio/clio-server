@@ -69,6 +69,19 @@ Spring은 분석 완료를 기다리지 않고 Agent Server가 run을 접수하�
 `CLIO_AGENT_ENABLED=false`로 호출을 끌 수 있다. MVP에서는 dispatch 실패를 로그로만
 남기며 자동 재시도와 별도 작업 queue는 두지 않는다.
 
+`request_id`는 첫 시도에 `process-bug-{bugId}`, 재시도에 `process-bug-{bugId}-retry-{n}`이다.
+`n`은 그 Bug의 기존 run 수이므로 실패한 run 기록이 보존된다.
+
+### 실패한 처리 재시도
+
+- Agent run이 `FAILED`가 되면 `ANALYZING`이던 Bug를 `FAILED`로 바꾼다.
+- `POST /external-api/v1/projects/{projectId}/bugs/{bugId}/retry`는 `FAILED` Bug를 `NEW`로 되돌리고
+  다시 dispatch한다(202). 활성 저장소 중 동기화에 실패한 것이 있으면 `409`다. 동기화 중이면 `NEW`로
+  기다렸다가 동기화 완료 시 dispatch된다.
+- `POST /api/v1/projects/{projectId}/repositories/{repositoryId}/sync`는 `FAILED`·`SYNCED` 저장소를
+  `PENDING`으로 바꾸고 `repository_added`를 새 request_id로 다시 보낸다(202). `PENDING`·`SYNCING`·비활성은 `409`다.
+- 자동 재시도는 하지 않는다. 재시도는 사용자가 명시적으로 요청한다.
+
 ### 판단 책임
 
 Spring은 Bug·Issue 생명주기와 데이터 무결성만 관리한다.
@@ -345,7 +358,8 @@ Bug는 다음 전이를 허용한다.
 
 ```text
 NEW → ANALYZING | TRIAGED | IGNORED
-ANALYZING → NEW | TRIAGED | IGNORED
+ANALYZING → NEW | TRIAGED | IGNORED | FAILED
+FAILED → NEW | IGNORED
 TRIAGED → ANALYZING | RESOLVED | IGNORED
 RESOLVED → TRIAGED
 IGNORED → NEW
