@@ -17,3 +17,13 @@
 - 전이: `ANALYZING → FAILED`, `FAILED → NEW | IGNORED`.
 - run 실패 시 버그가 `ANALYZING`일 때만 바꾼다. 사용자가 이미 다른 상태로 바꾼 버그는 건드리지 않는다.
 - 버그 ID는 run의 `request_payload.bug_id`에서 읽는다.
+
+## D6. 기존 DB의 상태 제약
+
+### 결정: A — Flyway `V8`에서 `bugs_status_check` 교체
+
+- 대안 A: `V8__add_failed_bug_status.sql`에서 제약을 새 값 집합으로 교체한다. ← 선택
+- 대안 B: 새 DB만 지원하고 기존 DB는 재생성한다. 체험 스택과 개발 DB가 `FAILED` 저장 시 바로 깨진다.
+
+선택 이유: Hibernate `ddl-auto: update`는 기존 CHECK 제약을 갱신하지 않는다. `V6`가 `sync_status`에 같은 방식을
+쓴 선례가 있다. 테이블이 없는 새 DB에서는 아무것도 하지 않는다.
