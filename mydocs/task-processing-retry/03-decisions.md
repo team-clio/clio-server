@@ -27,3 +27,22 @@
 
 선택 이유: Hibernate `ddl-auto: update`는 기존 CHECK 제약을 갱신하지 않는다. `V6`가 `sync_status`에 같은 방식을
 쓴 선례가 있다. 테이블이 없는 새 DB에서는 아무것도 하지 않는다.
+
+## D2. 재시도 request_id
+
+### 결정: A — `process-bug-{bugId}-retry-{n}`, `n`은 기존 run 수
+
+- 대안 A: 재시도마다 새 request_id를 쓰고 `n`을 기존 run 수로 계산한다. ← 선택
+- 대안 B: A와 같지만 `n`을 버그의 시도 횟수 컬럼으로 관리한다. 스키마가 바뀐다.
+- 대안 C: 기존 `FAILED` run을 `PENDING`으로 되돌려 재사용한다. 실패 기록이 덮어써진다.
+- 대안 D: Agent가 `FAILED` run을 재시작하도록 바꾼다. 두 저장소 계약이 함께 바뀐다.
+
+선택 이유: 스키마와 Agent를 바꾸지 않고 실패 기록을 보존한다. Agent는 버그 ID를 payload에서 읽으므로
+request_id 형식이 바뀌어도 영향이 없다.
+
+구현 규칙:
+- 첫 시도는 기존과 같은 `process-bug-{bugId}`다.
+- 시도 수는 `requestId = process-bug-{bugId}` 또는 `process-bug-{bugId}-retry-%`인 run만 센다.
+  `process-bug-70`처럼 접두사만 같은 다른 버그의 run은 세지 않는다.
+- 결과적 변화: `IGNORED → NEW`로 되돌린 버그가 다시 디스패치되면, 이전에는 `COMPLETED` run이 재생되어 아무 일도
+  일어나지 않았지만 이제 새로 처리된다.

@@ -1,5 +1,6 @@
 package ax.clio;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -9,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ax.clio.project.entity.Project;
 import ax.clio.project.repository.ProjectRepository;
+import ax.clio.workflow.service.AgentWorkflowRunService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ class AgentIntegrationLifecycleTest {
 
 	@Autowired private MockMvc mockMvc;
 	@Autowired private ProjectRepository projectRepository;
+	@Autowired private AgentWorkflowRunService workflowRunService;
 
 	@Test
 	void completesBugToIssueAnalysisWorkflow() throws Exception {
@@ -314,6 +317,27 @@ class AgentIntegrationLifecycleTest {
 
 		mockMvc.perform(get(external + "/bugs"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items[0].status").value("IGNORED"));
+	}
+
+	@Test
+	void retryRequestIdPreservesPreviousAttempts() throws Exception {
+		Project project = projectRepository.save(Project.create("Retry ids", null));
+		String internal = "/internal-api/v1/projects/" + project.getId();
+		assertThat(workflowRunService.nextProcessReportRequestId(project.getId(), 7L)).isEqualTo("process-bug-7");
+
+		for (String requestId : new String[] {"process-bug-7", "process-bug-70"}) {
+			mockMvc.perform(post(internal + "/workflow-runs")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"request_id\":\"%s\",\"request_type\":\"process_report\",\"request_payload\":{\"bug_id\":7}}".formatted(requestId)))
+					.andExpect(status().isCreated());
+		}
+		assertThat(workflowRunService.nextProcessReportRequestId(project.getId(), 7L)).isEqualTo("process-bug-7-retry-1");
+
+		mockMvc.perform(post(internal + "/workflow-runs")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"request_id\":\"process-bug-7-retry-1\",\"request_type\":\"process_report\",\"request_payload\":{\"bug_id\":7}}"))
+				.andExpect(status().isCreated());
+		assertThat(workflowRunService.nextProcessReportRequestId(project.getId(), 7L)).isEqualTo("process-bug-7-retry-2");
 	}
 
 	private JsonNode json(String value) throws Exception {

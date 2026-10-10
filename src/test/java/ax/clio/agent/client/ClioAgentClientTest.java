@@ -50,7 +50,7 @@ class ClioAgentClientTest {
 						"""))
 				.andRespond(withSuccess("{\"run_id\":\"run-1\"}", MediaType.APPLICATION_JSON));
 
-		client.processBug(3L, 72L);
+		client.processBug(3L, 72L, "process-bug-72");
 
 		server.verify();
 	}
@@ -81,7 +81,7 @@ class ClioAgentClientTest {
 						"""))
 				.andRespond(withSuccess("{\"run_id\":\"run-1\"}", MediaType.APPLICATION_JSON));
 
-		client.processBug(3L, 72L);
+		client.processBug(3L, 72L, "process-bug-72");
 
 		server.verify();
 	}

@@ -45,9 +45,9 @@ public class ClioAgentClient {
 		this.traceEnvelope = traceEnvelope;
 	}
 
-	public void processBug(Long projectId, Long bugId) {
+	public void processBug(Long projectId, Long bugId, String requestId) {
 		Map<String, Object> request = Map.of(
-				"request_id", "process-bug-" + bugId,
+				"request_id", requestId,
 				"request_type", PROCESS_REPORT,
 				"project_id", projectId.toString(),
 				"payload", Map.of("bug_id", bugId.toString())

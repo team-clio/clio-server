@@ -24,6 +24,13 @@ public interface AgentWorkflowRunRepository extends JpaRepository<AgentWorkflowR
 			@Param("projectId") Long projectId
 	);
 
+	@Query("""
+			select count(run) from AgentWorkflowRun run
+			where run.project.id = :projectId
+			  and (run.requestId = :requestId or run.requestId like concat(:requestId, '-retry-%'))
+			""")
+	long countAttempts(@Param("projectId") Long projectId, @Param("requestId") String requestId);
+
 	long countByStatus(AgentWorkflowStatus status);
 
 	long countByStatusAndStartedAtBefore(AgentWorkflowStatus status, Instant startedAt);
