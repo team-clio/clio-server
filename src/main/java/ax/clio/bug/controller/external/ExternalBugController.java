@@ -72,4 +72,9 @@ public class ExternalBugController {
 	) {
 		return ResponseEntity.ok(bugLifecycleService.update(projectId, bugId, request));
 	}
+
+	@PostMapping("/{bugId}/retry")
+	public ResponseEntity<BugLifecycleResponse> retryBug(@PathVariable Long projectId, @PathVariable Long bugId) {
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(bugLifecycleService.retry(projectId, bugId));
+	}
 }

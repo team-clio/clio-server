@@ -1,5 +1,6 @@
 package ax.clio.bug.service;
 
+import ax.clio.agent.event.BugCollectedEvent;
 import ax.clio.bug.dto.BugLifecycleResponse;
 import ax.clio.bug.dto.UpdateBugRequest;
 import ax.clio.bug.entity.Bug;
@@ -8,6 +9,7 @@ import ax.clio.bug.repository.BugRepository;
 import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BugLifecycleService {
 
 	private final BugRepository bugRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public BugLifecycleResponse update(Long projectId, Long bugId, UpdateBugRequest request) {
@@ -32,6 +35,22 @@ public class BugLifecycleService {
 		} catch (IllegalStateException exception) {
 			throw new ConflictException(exception.getMessage());
 		}
+		return BugLifecycleResponse.from(bug);
+	}
+
+	/**
+	 * Agent 처리에 실패한 버그를 다시 처리 대기열에 넣는다. 저장소가 동기화 중이면 {@code NEW}로 남아
+	 * 동기화 완료 시 디스패치된다.
+	 */
+	@Transactional
+	public BugLifecycleResponse retry(Long projectId, Long bugId) {
+		Bug bug = bugRepository.findByIdAndProjectIdForUpdate(bugId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Bug not found: " + bugId));
+		if (bug.getStatus() != BugStatus.FAILED) {
+			throw new ConflictException("Only FAILED bugs can be retried: " + bug.getStatus());
+		}
+		bug.updateStatus(BugStatus.NEW);
+		eventPublisher.publishEvent(new BugCollectedEvent(projectId, bugId));
 		return BugLifecycleResponse.from(bug);
 	}
 
