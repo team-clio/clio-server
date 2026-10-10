@@ -40,7 +40,8 @@ import org.hibernate.type.SqlTypes;
 public class Bug {
 	private static final Map<BugStatus, EnumSet<BugStatus>> STATUS_TRANSITIONS = Map.of(
 			BugStatus.NEW, EnumSet.of(BugStatus.ANALYZING, BugStatus.TRIAGED, BugStatus.IGNORED),
-			BugStatus.ANALYZING, EnumSet.of(BugStatus.NEW, BugStatus.TRIAGED, BugStatus.IGNORED),
+			BugStatus.ANALYZING, EnumSet.of(BugStatus.NEW, BugStatus.TRIAGED, BugStatus.IGNORED, BugStatus.FAILED),
+			BugStatus.FAILED, EnumSet.of(BugStatus.NEW, BugStatus.IGNORED),
 			BugStatus.TRIAGED, EnumSet.of(BugStatus.ANALYZING, BugStatus.RESOLVED, BugStatus.IGNORED),
 			BugStatus.RESOLVED, EnumSet.of(BugStatus.TRIAGED),
 			BugStatus.IGNORED, EnumSet.of(BugStatus.NEW)

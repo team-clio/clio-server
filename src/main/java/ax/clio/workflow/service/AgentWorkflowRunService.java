@@ -165,6 +165,17 @@ public class AgentWorkflowRunService {
 			return;
 		}
 		run.fail(code, message, checkpoint);
+		if ("process_report".equals(run.getRequestType())) {
+			markBugFailed(run);
+		}
+	}
+
+	private void markBugFailed(AgentWorkflowRun run) {
+		long bugId = run.getRequestPayload().path("bug_id").asLong();
+		bugRepository.findByIdAndProjectIdForUpdate(bugId, run.getProject().getId())
+				// 사용자가 이미 다른 상태로 바꾼 버그는 실패로 덮어쓰지 않는다.
+				.filter(bug -> bug.getStatus() == BugStatus.ANALYZING)
+				.ifPresent(bug -> bug.updateStatus(BugStatus.FAILED));
 	}
 
 	private WorkflowRunResponse response(AgentWorkflowRun run) {
