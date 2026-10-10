@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ax.clio.project.entity.Project;
 import ax.clio.project.repository.ProjectRepository;
+import ax.clio.project.repository.ProjectSourceRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +29,9 @@ class ProjectControllerTest {
 
 	@Autowired
 	private ProjectRepository projectRepository;
+
+	@Autowired
+	private ProjectSourceRepository projectSourceRepository;
 
 	@Test
 	void createsProjectAndReturnsProjectList() throws Exception {
@@ -238,5 +242,35 @@ class ProjectControllerTest {
 				result.andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONFLICT"));
 			}
 		}
+	}
+
+	@Test
+	void resyncsFailedRepository() throws Exception {
+		Project project = projectRepository.save(Project.create("Resync", null));
+		long repositoryId = createRepository(project);
+		projectSourceRepository.findById(repositoryId).orElseThrow().markFailed();
+
+		mockMvc.perform(post("/api/v1/projects/{projectId}/repositories/{repositoryId}/sync", project.getId(), repositoryId))
+				.andExpect(status().isAccepted())
+				.andExpect(jsonPath("$.syncStatus").value("PENDING"));
+	}
+
+	@Test
+	void rejectsResyncWhileSynchronizationIsInProgress() throws Exception {
+		Project project = projectRepository.save(Project.create("Resync pending", null));
+		long repositoryId = createRepository(project);
+
+		mockMvc.perform(post("/api/v1/projects/{projectId}/repositories/{repositoryId}/sync", project.getId(), repositoryId))
+				.andExpect(status().isConflict());
+	}
+
+	private long createRepository(Project project) throws Exception {
+		String response = mockMvc.perform(post("/api/v1/projects/{projectId}/repositories", project.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"provider":"GITHUB","owner":"acme","name":"resync","url":"https://github.com/acme/resync","defaultBranch":"main","includePaths":[],"excludePaths":[],"enabled":true}
+								"""))
+				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+		return new com.fasterxml.jackson.databind.ObjectMapper().readTree(response).get("id").asLong();
 	}
 }

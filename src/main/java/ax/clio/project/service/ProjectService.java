@@ -23,6 +23,7 @@ import ax.clio.project.dto.RepositoryResponse;
 import ax.clio.project.dto.UpdateProjectRequest;
 import ax.clio.project.entity.Project;
 import ax.clio.project.entity.ProjectSource;
+import ax.clio.project.entity.ProjectSourceSyncStatus;
 import ax.clio.project.repository.ProjectRepository;
 import ax.clio.project.repository.ProjectContextRepository;
 import ax.clio.project.repository.ProjectSourceRepository;
@@ -159,6 +160,26 @@ public class ProjectService {
 		if (source.isEnabled()) {
 			publishRepositorySync(source, RepositorySyncRequestType.REPOSITORY_ADDED);
 		}
+		return RepositoryResponse.from(source);
+	}
+
+	/**
+	 * 실패했거나 이미 동기화된 저장소의 전체 snapshot을 다시 만든다. 진행 중인 동기화와 겹치지 않도록
+	 * {@code PENDING}·{@code SYNCING} 상태에서는 거부한다.
+	 */
+	@Transactional
+	public RepositoryResponse resyncRepository(Long projectId, Long repositoryId) {
+		requireProject(projectId);
+		ProjectSource source = findRepository(projectId, repositoryId);
+		if (!source.isEnabled()) {
+			throw new ConflictException("Disabled repositories cannot be synchronized: " + repositoryId);
+		}
+		ProjectSourceSyncStatus status = source.getSyncStatus();
+		if (status != ProjectSourceSyncStatus.FAILED && status != ProjectSourceSyncStatus.SYNCED) {
+			throw new ConflictException("Repository synchronization is already in progress: " + status);
+		}
+		source.markPending();
+		publishRepositorySync(source, RepositorySyncRequestType.REPOSITORY_ADDED);
 		return RepositoryResponse.from(source);
 	}
 
