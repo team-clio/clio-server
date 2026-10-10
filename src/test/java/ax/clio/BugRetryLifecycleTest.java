@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ax.clio.project.entity.Project;
 import ax.clio.project.repository.ProjectRepository;
+import ax.clio.project.repository.ProjectSourceRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ class BugRetryLifecycleTest {
 
 	@Autowired private MockMvc mockMvc;
 	@Autowired private ProjectRepository projectRepository;
+	@Autowired private ProjectSourceRepository projectSourceRepository;
 
 	@Test
 	void retriesFailedBugByReturningItToNew() throws Exception {
@@ -45,6 +47,25 @@ class BugRetryLifecycleTest {
 
 		mockMvc.perform(post(external(project) + "/bugs/" + bugId + "/retry"))
 				.andExpect(status().isConflict());
+	}
+
+	@Test
+	void rejectsRetryWhileRepositorySyncHasFailed() throws Exception {
+		Project project = projectRepository.save(Project.create("Repository failed", null));
+		long repositoryId = OBJECT_MAPPER.readTree(mockMvc.perform(post("/api/v1/projects/{projectId}/repositories", project.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"provider":"GITHUB","owner":"acme","name":"app","url":"https://github.com/acme/app","defaultBranch":"main","includePaths":[],"excludePaths":[],"enabled":true}
+								"""))
+				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+		// 동기화 실패 콜백은 REQUIRES_NEW라 테스트 트랜잭션의 미커밋 데이터를 보지 못하므로 직접 바꾼다.
+		projectSourceRepository.findById(repositoryId).orElseThrow().markFailed();
+		long bugId = failedBug(project);
+
+		mockMvc.perform(post(external(project) + "/bugs/" + bugId + "/retry"))
+				.andExpect(status().isConflict());
+		mockMvc.perform(get(external(project) + "/bugs"))
+				.andExpect(jsonPath("$.items[0].status").value("FAILED"));
 	}
 
 	private long failedBug(Project project) throws Exception {

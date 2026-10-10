@@ -8,6 +8,10 @@ import ax.clio.bug.entity.BugStatus;
 import ax.clio.bug.repository.BugRepository;
 import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
+import ax.clio.project.entity.ProjectSource;
+import ax.clio.project.entity.ProjectSourceSyncStatus;
+import ax.clio.project.repository.ProjectSourceRepository;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -19,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BugLifecycleService {
 
 	private final BugRepository bugRepository;
+	private final ProjectSourceRepository projectSourceRepository;
 	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
@@ -40,7 +45,7 @@ public class BugLifecycleService {
 
 	/**
 	 * Agent 처리에 실패한 버그를 다시 처리 대기열에 넣는다. 저장소가 동기화 중이면 {@code NEW}로 남아
-	 * 동기화 완료 시 디스패치된다.
+	 * 동기화 완료 시 디스패치되고, 동기화에 실패한 저장소가 있으면 먼저 재동기화해야 한다.
 	 */
 	@Transactional
 	public BugLifecycleResponse retry(Long projectId, Long bugId) {
@@ -48,6 +53,16 @@ public class BugLifecycleService {
 				.orElseThrow(() -> new ResourceNotFoundException("Bug not found: " + bugId));
 		if (bug.getStatus() != BugStatus.FAILED) {
 			throw new ConflictException("Only FAILED bugs can be retried: " + bug.getStatus());
+		}
+		String failedSources = projectSourceRepository.findAllByProjectIdAndEnabledTrue(projectId).stream()
+				.filter(source -> source.getSyncStatus() == ProjectSourceSyncStatus.FAILED)
+				.map(ProjectSource::getId)
+				.map(String::valueOf)
+				.collect(Collectors.joining(", "));
+		if (!failedSources.isEmpty()) {
+			throw new ConflictException(
+					"Repository synchronization failed. Resync repositories before retrying: " + failedSources
+			);
 		}
 		bug.updateStatus(BugStatus.NEW);
 		eventPublisher.publishEvent(new BugCollectedEvent(projectId, bugId));
