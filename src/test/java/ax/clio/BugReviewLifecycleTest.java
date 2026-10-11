@@ -42,6 +42,26 @@ class BugReviewLifecycleTest {
 				.andExpect(jsonPath("$[0].reason").value("증상은 같지만 오류 신호가 다릅니다."));
 	}
 
+	@Test
+	void linksReviewedBugToTheChosenIssueAsManualGrouping() throws Exception {
+		Project project = projectRepository.save(Project.create("Review link", null));
+		long candidateIssueId = createIssueFromBug(project, "Existing failure");
+		long bugId = reviewBug(project, candidateIssueId);
+
+		mockMvc.perform(post(external(project) + "/bug-reviews/" + bugId + "/link")
+						.contentType(MediaType.APPLICATION_JSON).content("{\"issue_id\":%d}".formatted(candidateIssueId)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.issue_id").value(candidateIssueId));
+		mockMvc.perform(post(external(project) + "/bug-reviews/" + bugId + "/link")
+						.contentType(MediaType.APPLICATION_JSON).content("{\"issue_id\":%d}".formatted(candidateIssueId)))
+				.andExpect(status().isConflict());
+
+		mockMvc.perform(get(external(project) + "/bug-reviews"))
+				.andExpect(jsonPath("$.length()").value(0));
+		mockMvc.perform(get(external(project) + "/issues/" + candidateIssueId))
+				.andExpect(jsonPath("$.bugs[?(@.id == %d)].groupedBy".formatted(bugId)).value("MANUAL"));
+	}
+
 	/** Agent가 기존 Issue 후보를 제안하며 검토를 요청한 버그를 만든다. */
 	long reviewBug(Project project, long candidateIssueId) throws Exception {
 		long bugId = collectBug(project, "Similar failure");

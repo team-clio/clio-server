@@ -61,6 +61,13 @@ public class IssueBug {
 		return issueBug;
 	}
 
+	/** 사람이 검토 대기 버그를 기존 Issue에 연결했다는 기록. */
+	public static IssueBug createManual(Issue issue, Bug bug) {
+		IssueBug issueBug = create(issue, bug, BigDecimal.ONE);
+		issueBug.groupedBy = IssueGroupingMethod.MANUAL;
+		return issueBug;
+	}
+
 	@PrePersist
 	void prePersist() {
 		this.createdAt = Instant.now();
