@@ -31,6 +31,17 @@ public interface AgentWorkflowRunRepository extends JpaRepository<AgentWorkflowR
 			""")
 	long countAttempts(@Param("projectId") Long projectId, @Param("requestId") String requestId);
 
+	@Query("""
+			select run from AgentWorkflowRun run
+			where run.project.id = :projectId
+			  and (run.requestId = :requestId or run.requestId like concat(:requestId, '-retry-%'))
+			order by run.id desc
+			""")
+	java.util.List<AgentWorkflowRun> findAttemptsLatestFirst(
+			@Param("projectId") Long projectId,
+			@Param("requestId") String requestId
+	);
+
 	long countByStatus(AgentWorkflowStatus status);
 
 	long countByStatusAndStartedAtBefore(AgentWorkflowStatus status, Instant startedAt);
