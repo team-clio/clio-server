@@ -62,6 +62,33 @@ class BugReviewLifecycleTest {
 				.andExpect(jsonPath("$.bugs[?(@.id == %d)].groupedBy".formatted(bugId)).value("MANUAL"));
 	}
 
+	@Test
+	void createsNewIssueFromReviewByQueuingTheBugAgain() throws Exception {
+		Project project = projectRepository.save(Project.create("Review create", null));
+		long bugId = reviewBug(project, createIssueFromBug(project, "Existing failure"));
+
+		mockMvc.perform(post(external(project) + "/bug-reviews/" + bugId + "/create-issue"))
+				.andExpect(status().isAccepted())
+				.andExpect(jsonPath("$.status").value("NEW"));
+		mockMvc.perform(post(external(project) + "/bug-reviews/" + bugId + "/create-issue"))
+				.andExpect(status().isConflict());
+	}
+
+	@Test
+	void rejectsCreatingIssueFromReviewWhileRepositoryIsNotSynced() throws Exception {
+		Project project = projectRepository.save(Project.create("Review unsynced", null));
+		long bugId = reviewBug(project, createIssueFromBug(project, "Existing failure"));
+		mockMvc.perform(post("/api/v1/projects/{projectId}/repositories", project.getId())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"provider":"GITHUB","owner":"acme","name":"app","url":"https://github.com/acme/app","defaultBranch":"main","includePaths":[],"excludePaths":[],"enabled":true}
+								"""))
+				.andExpect(status().isCreated());
+
+		mockMvc.perform(post(external(project) + "/bug-reviews/" + bugId + "/create-issue"))
+				.andExpect(status().isConflict());
+	}
+
 	/** Agent가 기존 Issue 후보를 제안하며 검토를 요청한 버그를 만든다. */
 	long reviewBug(Project project, long candidateIssueId) throws Exception {
 		long bugId = collectBug(project, "Similar failure");

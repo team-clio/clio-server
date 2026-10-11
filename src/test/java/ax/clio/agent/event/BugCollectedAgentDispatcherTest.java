@@ -29,7 +29,7 @@ class BugCollectedAgentDispatcherTest {
 		dispatcher.dispatch(new BugCollectedEvent(3L, 72L));
 
 		verify(lifecycleService).claimForAnalysis(3L, 72L);
-		verify(client).processBug(3L, 72L, "process-bug-72");
+		verify(client).processBug(3L, 72L, "process-bug-72", false);
 	}
 
 	@Test
@@ -39,12 +39,12 @@ class BugCollectedAgentDispatcherTest {
 		BugRepository bugRepository = mock(BugRepository.class);
 		ProjectSourceRepository sourceRepository = readySourceRepository();
 		when(lifecycleService.claimForAnalysis(3L, 72L)).thenReturn(true);
-		doThrow(new IllegalStateException("agent unavailable")).when(client).processBug(3L, 72L, "process-bug-72");
+		doThrow(new IllegalStateException("agent unavailable")).when(client).processBug(3L, 72L, "process-bug-72", false);
 		BugCollectedAgentDispatcher dispatcher = new BugCollectedAgentDispatcher(client, lifecycleService, bugRepository, sourceRepository, requestIds());
 
 		dispatcher.dispatch(new BugCollectedEvent(3L, 72L));
 
-		verify(client).processBug(3L, 72L, "process-bug-72");
+		verify(client).processBug(3L, 72L, "process-bug-72", false);
 		verify(lifecycleService).markNew(3L, 72L);
 	}
 
@@ -59,7 +59,7 @@ class BugCollectedAgentDispatcherTest {
 
 		dispatcher.dispatch(new BugCollectedEvent(3L, 72L));
 
-		verify(client, org.mockito.Mockito.never()).processBug(3L, 72L, "process-bug-72");
+		verify(client, org.mockito.Mockito.never()).processBug(3L, 72L, "process-bug-72", false);
 		verify(lifecycleService, org.mockito.Mockito.never()).claimForAnalysis(3L, 72L);
 	}
 

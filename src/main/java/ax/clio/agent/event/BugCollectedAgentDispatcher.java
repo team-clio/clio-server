@@ -37,7 +37,8 @@ public class BugCollectedAgentDispatcher {
 			agentClient.processBug(
 					event.projectId(),
 					event.bugId(),
-					workflowRunService.nextProcessReportRequestId(event.projectId(), event.bugId())
+					workflowRunService.nextProcessReportRequestId(event.projectId(), event.bugId()),
+					event.createNewIssue()
 			);
 		} catch (RuntimeException exception) {
 			log.error(
