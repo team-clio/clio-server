@@ -126,9 +126,8 @@ public class IssueLifecycleService {
 
 	private IssueBug persistLink(Issue issue, Bug bug, BigDecimal confidence) {
 		issue.attach(bug, confidence);
-		IssueBug link = issueBugRepository.save(IssueBug.create(issue, bug, confidence));
-		bug.markTriaged();
-		return link;
+		// Agent workflow 중의 연결이다. 분석까지 끝나 run이 COMPLETED가 될 때 TRIAGED로 바꾼다.
+		return issueBugRepository.save(IssueBug.create(issue, bug, confidence));
 	}
 
 	private IssueBugLifecycleResponse response(

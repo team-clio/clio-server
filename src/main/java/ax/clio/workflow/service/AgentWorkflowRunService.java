@@ -152,14 +152,15 @@ public class AgentWorkflowRunService {
 			}
 			return;
 		}
-		if ("process_report".equals(run.getRequestType()) && result != null
-				&& "needs_review".equals(result.path("action").asText())) {
-			long bugId = result.path("bug_id").asLong();
+		if ("process_report".equals(run.getRequestType())) {
+			long bugId = run.getRequestPayload().path("bug_id").asLong();
 			var bug = bugRepository.findByIdAndProjectIdForUpdate(bugId, run.getProject().getId())
 					.orElseThrow(() -> new ResourceNotFoundException("Bug not found: " + bugId));
-			// 매칭이 확신하지 못한 버그는 사람이 연결 여부를 정할 때까지 검토 대기로 둔다.
+			// 처리 도중 사용자가 바꾼 상태는 덮어쓰지 않는다.
 			if (bug.getStatus() == BugStatus.ANALYZING) {
-				bug.updateStatus(BugStatus.NEEDS_REVIEW);
+				boolean needsReview = result != null && "needs_review".equals(result.path("action").asText());
+				// 매칭이 확신하지 못한 버그는 사람이 정할 때까지 검토 대기, 나머지는 분석까지 끝난 시점에 분류 완료다.
+				bug.updateStatus(needsReview ? BugStatus.NEEDS_REVIEW : BugStatus.TRIAGED);
 			}
 		}
 		run.complete(result);
