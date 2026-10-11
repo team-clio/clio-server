@@ -82,6 +82,18 @@ Spring은 분석 완료를 기다리지 않고 Agent Server가 run을 접수하�
   `PENDING`으로 바꾸고 `repository_added`를 새 request_id로 다시 보낸다(202). `PENDING`·`SYNCING`·비활성은 `409`다.
 - 자동 재시도는 하지 않는다. 재시도는 사용자가 명시적으로 요청한다.
 
+### 매칭 검토
+
+- `process_report` 결과가 `needs_review`면 `ANALYZING`이던 Bug를 `NEEDS_REVIEW`로 바꾼다. 결과에는
+  `candidate_issue_id`, `confidence`, `reason`이 담긴다.
+- `GET /external-api/v1/projects/{projectId}/bug-reviews`는 검토 대기 Bug와 최근 처리 결과의 후보 Issue를 반환한다.
+- `POST .../bug-reviews/{bugId}/link`(`issue_id`)는 사람이 고른 Issue에 연결한다. `grouped_by=MANUAL`,
+  링크 신뢰도 1.0으로 기록하고 Issue의 AI 신뢰도는 바꾸지 않는다. Bug는 `TRIAGED`가 된다.
+- `POST .../bug-reviews/{bugId}/create-issue`는 Bug를 `NEW`로 되돌리고 `payload.match_override=create_new`로
+  다시 dispatch한다(202). Agent는 매칭을 건너뛰고 신규 Issue 생성과 분석을 수행한다. 활성 저장소가 모두
+  `SYNCED`가 아니면 `409`다.
+- 검토 대기에서 처리하지 않을 Bug는 `PATCH /bugs/{bugId}`로 `IGNORED`로 바꾼다.
+
 ### 판단 책임
 
 Spring은 Bug·Issue 생명주기와 데이터 무결성만 관리한다.
@@ -358,8 +370,9 @@ Bug는 다음 전이를 허용한다.
 
 ```text
 NEW → ANALYZING | TRIAGED | IGNORED
-ANALYZING → NEW | TRIAGED | IGNORED | FAILED
+ANALYZING → NEW | TRIAGED | IGNORED | FAILED | NEEDS_REVIEW
 FAILED → NEW | IGNORED
+NEEDS_REVIEW → TRIAGED | NEW | IGNORED
 TRIAGED → ANALYZING | RESOLVED | IGNORED
 RESOLVED → TRIAGED
 IGNORED → NEW
