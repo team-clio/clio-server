@@ -46,11 +46,22 @@ public class ClioAgentClient {
 	}
 
 	public void processBug(Long projectId, Long bugId, String requestId) {
+		processBug(projectId, bugId, requestId, false);
+	}
+
+	/**
+	 * 버그 처리를 요청한다. {@code createNewIssue}가 true면 사람이 검토에서 신규 Issue를 고른 경우라 Agent가
+	 * 매칭을 건너뛴다.
+	 */
+	public void processBug(Long projectId, Long bugId, String requestId, boolean createNewIssue) {
+		Map<String, Object> payload = createNewIssue
+				? Map.of("bug_id", bugId.toString(), "match_override", "create_new")
+				: Map.of("bug_id", bugId.toString());
 		Map<String, Object> request = Map.of(
 				"request_id", requestId,
 				"request_type", PROCESS_REPORT,
 				"project_id", projectId.toString(),
-				"payload", Map.of("bug_id", bugId.toString())
+				"payload", payload
 		);
 		restClient.post()
 				.uri("/runs")

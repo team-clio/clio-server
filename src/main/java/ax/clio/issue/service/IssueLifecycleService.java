@@ -3,6 +3,7 @@ package ax.clio.issue.service;
 import java.math.BigDecimal;
 
 import ax.clio.bug.entity.Bug;
+import ax.clio.bug.entity.BugStatus;
 import ax.clio.bug.repository.BugRepository;
 import ax.clio.common.ConflictException;
 import ax.clio.common.ResourceNotFoundException;
@@ -63,6 +64,26 @@ public class IssueLifecycleService {
 		}
 
 		IssueBug link = persistLink(issue, bug, request.confidence());
+		return response(link, false, true);
+	}
+
+	/**
+	 * 매칭 검토 대기 버그를 사람이 고른 기존 Issue에 연결한다. Issue의 AI 신뢰도는 바꾸지 않는다.
+	 */
+	@Transactional
+	public IssueBugLifecycleResponse linkReviewedBug(Long projectId, Long bugId, Long issueId) {
+		Bug bug = requireBug(projectId, bugId);
+		if (bug.getStatus() != BugStatus.NEEDS_REVIEW) {
+			throw new ConflictException("Only NEEDS_REVIEW bugs can be linked from review: " + bug.getStatus());
+		}
+		Issue issue = issueRepository.findByIdAndProjectId(issueId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Issue not found: " + issueId));
+		if (issueBugRepository.findByBugId(bug.getId()).isPresent()) {
+			throw new ConflictException("Bug is already linked to an issue: " + bugId);
+		}
+		issue.attach(bug, issue.getAiConfidence());
+		IssueBug link = issueBugRepository.save(IssueBug.createManual(issue, bug));
+		bug.markTriaged();
 		return response(link, false, true);
 	}
 
