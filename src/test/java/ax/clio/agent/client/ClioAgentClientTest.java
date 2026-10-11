@@ -87,6 +87,26 @@ class ClioAgentClientTest {
 	}
 
 	@Test
+	void dispatchesReviewedBugWithCreateNewMatchOverride() {
+		RestClient.Builder builder = RestClient.builder();
+		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+		ClioAgentClient client = new ClioAgentClient(
+				builder,
+				new ClioAgentProperties(true, URI.create("http://agent:2024"))
+		);
+		server.expect(once(), requestTo("http://agent:2024/runs"))
+				.andExpect(content().json("""
+						{"input": {"request": {"request_id": "process-bug-72-retry-1",
+						  "payload": {"bug_id": "72", "match_override": "create_new"}}}}
+						"""))
+				.andRespond(withSuccess("{\"run_id\":\"run-1\"}", MediaType.APPLICATION_JSON));
+
+		client.processBug(3L, 72L, "process-bug-72-retry-1", true);
+
+		server.verify();
+	}
+
+	@Test
 	void dispatchesRepositoryAddedToTheRootGraph() {
 		RestClient.Builder builder = RestClient.builder();
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

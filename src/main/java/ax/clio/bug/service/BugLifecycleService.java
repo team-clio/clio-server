@@ -69,6 +69,27 @@ public class BugLifecycleService {
 		return BugLifecycleResponse.from(bug);
 	}
 
+	/**
+	 * 검토에서 신규 Issue를 고른 버그를 매칭 없이 다시 처리한다. 동기화 대기 중 재디스패치는 이 선택을 잃으므로
+	 * 활성 저장소가 모두 동기화된 상태에서만 받는다.
+	 */
+	@Transactional
+	public BugLifecycleResponse createIssueFromReview(Long projectId, Long bugId) {
+		Bug bug = bugRepository.findByIdAndProjectIdForUpdate(bugId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Bug not found: " + bugId));
+		if (bug.getStatus() != BugStatus.NEEDS_REVIEW) {
+			throw new ConflictException("Only NEEDS_REVIEW bugs can create an issue from review: " + bug.getStatus());
+		}
+		boolean ready = projectSourceRepository.findAllByProjectIdAndEnabledTrue(projectId).stream()
+				.allMatch(source -> source.getSyncStatus() == ProjectSourceSyncStatus.SYNCED);
+		if (!ready) {
+			throw new ConflictException("All enabled repositories must be SYNCED before creating an issue from review.");
+		}
+		bug.updateStatus(BugStatus.NEW);
+		eventPublisher.publishEvent(new BugCollectedEvent(projectId, bugId, true));
+		return BugLifecycleResponse.from(bug);
+	}
+
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public boolean claimForAnalysis(Long projectId, Long bugId) {
 		Bug bug = bugRepository.findByIdAndProjectIdForUpdate(bugId, projectId)
