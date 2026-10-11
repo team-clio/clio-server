@@ -157,7 +157,10 @@ public class AgentWorkflowRunService {
 			long bugId = result.path("bug_id").asLong();
 			var bug = bugRepository.findByIdAndProjectIdForUpdate(bugId, run.getProject().getId())
 					.orElseThrow(() -> new ResourceNotFoundException("Bug not found: " + bugId));
-			bug.updateStatus(BugStatus.TRIAGED);
+			// 매칭이 확신하지 못한 버그는 사람이 연결 여부를 정할 때까지 검토 대기로 둔다.
+			if (bug.getStatus() == BugStatus.ANALYZING) {
+				bug.updateStatus(BugStatus.NEEDS_REVIEW);
+			}
 		}
 		run.complete(result);
 	}
