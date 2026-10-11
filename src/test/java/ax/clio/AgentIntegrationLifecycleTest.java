@@ -261,7 +261,7 @@ class AgentIntegrationLifecycleTest {
 		mockMvc.perform(patch(runPath).contentType(MediaType.APPLICATION_JSON).content(completed))
 				.andExpect(status().isOk());
 		mockMvc.perform(get(external + "/bugs"))
-				.andExpect(status().isOk()).andExpect(jsonPath("$.items[0].status").value("TRIAGED"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.items[0].status").value("NEEDS_REVIEW"))
 				.andExpect(jsonPath("$.items[0].issue_id").isEmpty());
 	}
 
