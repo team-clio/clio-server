@@ -378,6 +378,10 @@ RESOLVED → TRIAGED
 IGNORED → NEW
 ```
 
+Agent 처리 중에는 Issue에 연결되어도 Bug가 `ANALYZING`으로 남는다. `process_report` run이 `COMPLETED`가 될 때
+`TRIAGED`(검토 판정이면 `NEEDS_REVIEW`), `FAILED`가 될 때 `FAILED`로 바뀐다. 따라서 `TRIAGED`는 연결과 분석이 모두
+끝났다는 뜻이다. 처리 도중 사용자가 바꾼 상태는 덮어쓰지 않는다. 검토 화면에서 사람이 연결하면 바로 `TRIAGED`다.
+
 각 Bug가 수집 오류 한 건이므로 새로운 발생은 기존 Bug의 상태를 되돌리지 않고
 새 Bug row로 생성한다.
 
